@@ -30,7 +30,7 @@ Tạo video **deep-dive** cho repo GitHub trending hôm nay, theo News v2 (nền
    ```
    & '...\.venv\Scripts\python.exe' '...\repo_today.py' render
    ```
-   (chạy NỀN — ~5-7 phút: synth + HyperFrames). Video ra `$voiceRoot\omnivoice\truyen-out\out\RepoToday_<repo>.mp4` (local).
+   (chạy NỀN — ~5-7 phút: synth + HyperFrames). Video ra `$voiceRoot\omnivoice\news-out\RepoToday_<repo>.mp4` (local).
 
 4. **Xong:** verify frame, gửi video (SendUserFile) + tóm tắt repo làm gì / ý nghĩa / ứng dụng agent.
 
