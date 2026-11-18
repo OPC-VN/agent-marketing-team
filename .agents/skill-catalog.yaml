@@ -319,4 +319,44 @@ skills:
     maturity: candidate
     evidence: []
 
+  - id: audio-truyen
+    path: .agents/skills/audio-truyen/SKILL.md
+    summary: Run the Nghe Tien Truyen pipeline that reads a tamhoan.com story chapter range in the OmniVoice xianxia voice and builds the audio and video, without inventing results when a step fails.
+    use_when:
+      - The user asks to read a tamhoan.com story aloud for a chapter range and build the audio or video.
+    do_not_use_when:
+      - General voice or script work with no story pipeline (use voice-routing).
+      - Standalone video editing with no story pipeline (use video-routing).
+    stages: [render, standalone]
+    modes: [execute]
+    requires:
+      execute:
+        read: [story_url_or_slug, chapter_range]
+        write: [story_audio_video_output]
+    outputs: [story_audio_mp3, story_video_mp4, subtitle_srt, manifest_json]
+    supports: []
+    references: []
+    maturity: candidate
+    evidence: []
+
+  - id: repo-today
+    path: .agents/skills/repo-today/SKILL.md
+    summary: Build a deep-dive video about today's top trending GitHub repo, with a script grounded in the README and an honest vibe-coder and agent angle.
+    use_when:
+      - The user wants a deep-dive video about today's top trending GitHub repo, or about a repo they name.
+    do_not_use_when:
+      - General AI-news or topic videos (use toptoday).
+      - Standalone video editing with no repo pipeline (use video-routing).
+    stages: [render, standalone]
+    modes: [execute]
+    requires:
+      execute:
+        read: [trending_repo_data, repo_readme]
+        write: [repo_today_scenes_and_video]
+    outputs: [repo_today_scenes_json, repo_today_video_mp4, repo_summary]
+    supports: []
+    references: []
+    maturity: candidate
+    evidence: []
+
 pilot_routes: []

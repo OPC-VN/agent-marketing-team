@@ -23,6 +23,8 @@ Luật vận hành canonical nằm ở [`../AGENTS.md`](../AGENTS.md); bản đ�
 - `content-production` — viết bài chuẩn hoá theo từng định dạng.
 - `hook-writer` — tạo hook theo ma trận phân khúc × động cơ × format.
 - `thread-writer` — tạo chuỗi bài viết liên kết.
+- `audio-truyen` — đọc truyện tamhoan.com bằng giọng OmniVoice, dựng audio/video theo dải chương.
+- `repo-today` — video deep-dive về repo GitHub nổi bật nhất hôm nay.
 
 ## 3. Kiểm Định (`checklists/`)
 - `QA_ASSET.md` — checklist máy tự chạy ở khâu ④ trước khi trình người (giọng, hashtag, `[KIỂM CHỨNG]`, claim có nguồn).

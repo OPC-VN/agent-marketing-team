@@ -51,6 +51,8 @@
 | Sản xuất nội dung từ Content đã duyệt | `.agents/skills/content-production/SKILL.md` |
 | Viết hook / câu mở chặn lướt | `.agents/skills/hook-writer/SKILL.md` |
 | Viết thread / chuỗi bài | `.agents/skills/thread-writer/SKILL.md` |
+| Đọc truyện tamhoan.com thành audio/video | `.agents/skills/audio-truyen/SKILL.md` |
+| Video deep-dive repo GitHub trending hôm nay | `.agents/skills/repo-today/SKILL.md` |
 | Tâm lý học marketing, vì sao người ta mua | `knowledge/psychology/MARKETING_PSYCHOLOGY.md` |
 | Retention / thumbnail / Shorts YouTube | `knowledge/playbooks/YOUTUBE_PLAYBOOK.md` |
 | Chuỗi email nuôi dưỡng / chuyển đổi | `knowledge/toolchains/EMAIL_SEQUENCES.md` |
@@ -102,6 +104,8 @@
 | lead-generation | Designing a lead magnet to capture targeted prospect interest.; Drafting opt-in page copy, delivery messaging, or a nurture email sequence. | lead_magnet_plan; optin_copy; nurture_email_sequence | The user requests sending bulk emails, configuring live CRMs, or collecting sensitive PII.; A complete campaign already exists and only asset QA is requested. |
 | conversion-optimization | A landing page or opt-in form receives traffic but exhibits low conversion rates.; Diagnosing friction, visual hierarchy, or missing value propositions on conversion assets. | cro_diagnostic_report; quick_wins_list; test_hypotheses_matrix | The task only requires minor text polishing for a social post or blog article.; The user demands guaranteed conversion percentage increases without testing. |
 | marketing-measurement | A YouTube video has high impressions but low CTR or weak retention and needs a diagnosis (YOUTUBE_GROWTH.md diagnosis table).; The funnel bottleneck must be found across the five funnel tiers, or KPIs chosen per content format.; Setting up campaign tracking, event taxonomy, UTM conventions, or KPI hierarchies.; Designing controlled A/B test briefs with sample sizes, primary metrics, and guardrails. | tracking_plan; experiment_brief; measurement_snapshot_report | The user assumes automated live analytics sync without manual entry or data verification.; A complete campaign is not yet published and drafting copy is requested. |
+| audio-truyen | The user asks to read a tamhoan.com story aloud for a chapter range and build the audio or video. | story_audio_mp3; story_video_mp4; subtitle_srt; manifest_json | General voice or script work with no story pipeline (use voice-routing).; Standalone video editing with no story pipeline (use video-routing). |
+| repo-today | The user wants a deep-dive video about today's top trending GitHub repo, or about a repo they name. | repo_today_scenes_json; repo_today_video_mp4; repo_summary | General AI-news or topic videos (use toptoday).; Standalone video editing with no repo pipeline (use video-routing). |
 <!-- SKILL_ROUTING:END -->
 
 **Luật chống ảo giác:** thư mục chỉ có `README`/`.gitkeep` = kho rỗng — không suy nội dung từ tên thư mục.
