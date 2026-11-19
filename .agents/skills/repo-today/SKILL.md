@@ -36,5 +36,5 @@ Tạo video **deep-dive** cho repo GitHub trending hôm nay, theo News v2 (nền
 
 ## Lưu ý
 - Phân tích phải TRUNG THỰC với README; phần vibe-coder/agent là ứng dụng hợp lý, nói rõ "có thể".
-- Không lộ tên tool nội bộ ở nội dung công khai (xem memory feedback_ainews_no_tool_names): giọng = Duc Nguyen.
+- Không lộ tên tool nội bộ ở nội dung công khai: giọng = giọng đã clone của chủ kênh (đặt trong cấu hình voice profile).
 - Chi tiết kỹ thuật: (Join-Path $voiceRoot 'omnivoice\apps\news\NEWS_V2_DESIGN.md'); component/layout trong `news_v2.py`.
