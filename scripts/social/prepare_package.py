@@ -113,7 +113,7 @@ def _structured_source(content: str, publication: dict[str, Any], row: dict[str,
     if not isinstance(channel, str) or not isinstance(post_format, str):
         raise ValueError("unknown V1 source format")
     allowed = {
-        ("youtube", "youtube_video"): {"post:youtube_desc", "post:youtube_video"},
+        ("youtube", "youtube_video"): {"post:youtube_desc"},
         ("youtube", "youtube_short"): {"post:youtube_short"},
         ("facebook", "reel"): {"post:reel"},
         ("facebook", "carousel"): {"post:carousel"},

@@ -9,7 +9,7 @@ Dùng thư mục bài V1 đã có `content.md`, `publish.json` và file media c�
 | Facebook `facebook_post` | Thân bài và `comment_1` riêng. `image_prompt` dùng cho sản xuất ảnh. |
 | Facebook `reel` | Lấy phần caption để tái sử dụng cho kênh khác. Video mặc định là `short.mp4`. Đích Facebook bị chặn vì bộ gửi gói chưa có hành động đăng Reel. |
 | Facebook `carousel`, `infographic` | Cần đúng một đoạn ở cấp ngoài cùng, trên một dòng bắt đầu bằng `**Caption:**` và có nội dung ngay sau nhãn. Sau dòng này chỉ chấp nhận dòng trống hoặc `---`. Cần ghi rõ file ảnh. Có thể tái sử dụng carousel cho một gói đơn với file và chữ đã chọn cho kênh đích. Gói Facebook nhiều ảnh chưa được hỗ trợ. |
-| YouTube `youtube_video` | Khối mô tả theo anchor `post:youtube_desc` hoặc `post:youtube_video` mà dòng V1 trỏ đến. |
+| YouTube `youtube_video` | Khối mô tả theo anchor `post:youtube_desc` mà dòng V1 trỏ đến. |
 | YouTube `youtube_short` | Một dòng `**Caption:**` riêng. Đích YouTube và TikTok nhận trực tiếp nguồn video YouTube. |
 
 ```powershell

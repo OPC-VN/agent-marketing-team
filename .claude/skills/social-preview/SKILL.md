@@ -1,6 +1,6 @@
 ---
 name: social-preview
-description: Use when preparing or reviewing a synthetic social-channel preview from marketing content without connecting or publishing.
+description: Use when preparing an offline social V2 review package from local marketing output or simulating a social preview with synthetic data.
 ---
 
 # social-preview — adapter nguồn
