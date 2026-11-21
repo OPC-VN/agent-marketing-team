@@ -305,11 +305,11 @@ def test_reel_claim_rolls_back_when_progress_insert_fails(tmp_path):
         con.set_authorizer(deny_insert)
         with pytest.raises(sqlite3.DatabaseError):
             ledger.claim_due(item, expected_version=1, now='2026-11-20T03:00:00Z')
-        con.set_authorizer(None)
+        con.set_authorizer(lambda *_: sqlite3.SQLITE_OK)  # 3.10 chưa nhận None
         assert ledger.get(item)['state'] == 'prepared'
         assert ledger.get(item)['attempt_id'] is None
     finally:
-        con.set_authorizer(None)
+        con.set_authorizer(lambda *_: sqlite3.SQLITE_OK)  # 3.10 chưa nhận None
         con.close()
 
 
