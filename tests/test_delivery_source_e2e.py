@@ -24,6 +24,8 @@ from postiz_adapter import FakePostiz  # noqa: E402
 from publish_dispatch import dispatch_fake  # noqa: E402
 
 
+@pytest.mark.xfail(strict=True, raises=ValueError,
+                   reason="dispatch_fake cố ý tắt (publish_dispatch.py) cho tới khi chứng minh được cách ly khỏi placeholder đám mây và dữ liệu người dùng; bật lại thì gỡ xfail")
 def test_approved_source_is_dispatched_once_to_fake_provider(post, tmp_path, monkeypatch):
     """An approved source should reach the fake, without requiring real I/O.
 
