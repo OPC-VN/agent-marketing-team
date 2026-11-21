@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
+pytest.importorskip("playwright.sync_api", reason="playwright không cài trong CI; chạy trên máy dev")
 from playwright.sync_api import sync_playwright
 
 from scripts.social.facebook_group_v1_fixture import build_group_reel_snapshot

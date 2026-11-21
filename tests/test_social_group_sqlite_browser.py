@@ -9,6 +9,7 @@ import threading
 from pathlib import Path
 
 import pytest
+pytest.importorskip("playwright.sync_api", reason="playwright không cài trong CI; chạy trên máy dev")
 from playwright.sync_api import sync_playwright
 
 from scripts.social.destination_ledger_fixture import DestinationFixtureLedger
