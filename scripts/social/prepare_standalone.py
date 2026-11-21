@@ -293,9 +293,9 @@ def prepare_standalone(
             ):
                 raise ValueError("Discord album images exceed the combined package size limit")
         canonical_snapshot(package)
-        (staged / "review.html").write_text(_review_standalone(package), encoding="utf-8")
+        (staged / "review.html").write_text(_review_standalone(package), encoding="utf-8", newline="\n")
         manifest = staged / "package.json"
-        manifest.write_text(json.dumps(package, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        manifest.write_text(json.dumps(package, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
         output_dir.mkdir()
         moved = []
         try:

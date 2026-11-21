@@ -39,7 +39,7 @@ def test_revocation_rejects_wrong_campaign_without_changing_intent(tmp_path):
     assert hasattr(AG, "revoke_delivery_intent"), "opt-in revocation entrypoint is missing"
     with pytest.raises(ValueError):
         AG.revoke_delivery_intent(ledger, intent, 1, scope={**key, "campaign_id": "other"},
-                                  gate="g2", by="Duc", quote="Thu hồi bài này")
+                                  gate="g2", by="Approver", quote="Thu hồi bài này")
     assert ledger.get(intent)["state"] == "prepared"
 
 
@@ -47,13 +47,13 @@ def test_revocation_keeps_human_quote_and_blocks_claim(tmp_path):
     ledger = DeliveryLedger(tmp_path / "ledger.sqlite3")
     intent, key = _intent(ledger)
     assert hasattr(AG, "revoke_delivery_intent"), "opt-in revocation entrypoint is missing"
-    assert AG.revoke_delivery_intent(ledger, intent, 1, scope=key, gate="g2", by="Duc",
+    assert AG.revoke_delivery_intent(ledger, intent, 1, scope=key, gate="g2", by="Approver",
                                      quote="Thu hồi bài này") == "cancelled"
     with pytest.raises(ValueError):
         ledger.claim(intent, 1)
     with sqlite3.connect(ledger.path) as con:
         row = con.execute("SELECT actor, quote, gate FROM events WHERE kind='revoke'").fetchone()
-    assert row == ("Duc", "Thu hồi bài này", "g2")
+    assert row == ("Approver", "Thu hồi bài này", "g2")
 
 
 def _scope(gate, post_id="*"):
@@ -96,10 +96,10 @@ def test_automatic_g1_event_is_not_human_delivery_approval(post):
 
 def test_g1_proof_requires_matching_human_event(post):
     campaign = _g1(post)
-    EV.write(campaign, "g1_approved", post="AST-001", by="Duc", via="phiên",
+    EV.write(campaign, "g1_approved", post="AST-001", by="Approver", via="phiên",
              note="Duyệt đề tài này", at=datetime.fromisoformat("2026-11-16T10:00:00+07:00"))
     proof = AG.read_delivery_gate_proof(campaign, _scope("g1"))
-    assert proof["by"] == "Duc" and proof["quote"] == "Duyệt đề tài này"
+    assert proof["by"] == "Approver" and proof["quote"] == "Duyệt đề tài này"
     assert len(proof["source_digest"]) == 64
 
 
@@ -121,11 +121,11 @@ def test_g2_proof_is_bound_to_the_exact_post_and_review(post):
                             them_cot=True, chi_cap_nhat=True)
     md_io.write_fm(post.parent / "campaign.md", fm, body)
     assert RP.cmd_init(post) == 0
-    assert RP.cmd_approve(post, "Duc", "Duyệt bài Facebook", "fb", "", "") == 0
+    assert RP.cmd_approve(post, "Approver", "Duyệt bài Facebook", "fb", "", "") == 0
     _set_qa(post, "passed")
     assert hasattr(AG, "read_delivery_gate_proof"), "source approval reader missing"
     proof = AG.read_delivery_gate_proof(post.parent, _scope("g2", "AST-001-fb"))
-    assert proof["gate"] == "g2" and proof["by"] == "Duc"
+    assert proof["gate"] == "g2" and proof["by"] == "Approver"
     assert proof["quote"] == "Duyệt bài Facebook" and len(proof["source_digest"]) == 64
     with pytest.raises(ValueError):
         AG.read_delivery_gate_proof(post.parent, _scope("g2", "AST-001-yt"))
@@ -138,7 +138,7 @@ def test_g2_failed_qa_cannot_be_used_without_a_recorded_override(post):
                             them_cot=True, chi_cap_nhat=True)
     md_io.write_fm(post.parent / "campaign.md", fm, body)
     assert RP.cmd_init(post) == 0
-    assert RP.cmd_approve(post, "Duc", "Duyệt bài Facebook", "fb", "", "") == 0
+    assert RP.cmd_approve(post, "Approver", "Duyệt bài Facebook", "fb", "", "") == 0
     path = post / "publish.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     next(p for p in data["posts"] if p["post_id"] == "AST-001-fb")["quality_check"] = "failed"
@@ -155,7 +155,7 @@ def test_g2_missing_or_pending_qa_is_not_delivery_approval(post, qa):
                             them_cot=True, chi_cap_nhat=True)
     md_io.write_fm(post.parent / "campaign.md", fm, body)
     assert RP.cmd_init(post) == 0
-    assert RP.cmd_approve(post, "Duc", "Duyệt bài Facebook", "fb", "", "") == 0
+    assert RP.cmd_approve(post, "Approver", "Duyệt bài Facebook", "fb", "", "") == 0
     path = post / "publish.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     next(p for p in data["posts"] if p["post_id"] == "AST-001-fb")["quality_check"] = qa
@@ -176,7 +176,7 @@ def test_failed_qa_requires_nonempty_recorded_override(post, note, allowed):
                             them_cot=True, chi_cap_nhat=True)
     md_io.write_fm(post.parent / "campaign.md", fm, body)
     assert RP.cmd_init(post) == 0
-    assert RP.cmd_approve(post, "Duc", note, "fb", "", "") == 0
+    assert RP.cmd_approve(post, "Approver", note, "fb", "", "") == 0
     _set_qa(post, "failed")
     if allowed:
         assert AG.read_delivery_gate_proof(post.parent, _scope("g2", "AST-001-fb"))["quote"] == note
@@ -192,10 +192,10 @@ def test_claim_fails_if_source_approval_changes_after_binding(post, tmp_path):
                             {"content_id": "AST-001", "folder": post.name},
                             them_cot=True, chi_cap_nhat=True)
     md_io.write_fm(campaign / "campaign.md", fm, body)
-    EV.write(campaign, "g1_approved", post="AST-001", by="Duc", via="phiên",
+    EV.write(campaign, "g1_approved", post="AST-001", by="Approver", via="phiên",
              note="Duyệt đề tài này", at=datetime.fromisoformat("2026-11-16T10:00:00+07:00"))
     assert RP.cmd_init(post) == 0
-    assert RP.cmd_approve(post, "Duc", "Duyệt bài Facebook", "fb", "", "") == 0
+    assert RP.cmd_approve(post, "Approver", "Duyệt bài Facebook", "fb", "", "") == 0
     _set_qa(post, "passed")
     ledger = DeliveryLedger(tmp_path / "ledger.sqlite3")
     g1, g2 = _scope("g1"), _scope("g2", "AST-001-fb")
@@ -223,10 +223,10 @@ def test_unchanged_source_proofs_allow_ledger_claim_without_dispatch(post, tmp_p
                             {"content_id": "AST-001", "folder": post.name},
                             them_cot=True, chi_cap_nhat=True)
     md_io.write_fm(campaign / "campaign.md", fm, body)
-    EV.write(campaign, "g1_approved", post="AST-001", by="Duc", via="phiên",
+    EV.write(campaign, "g1_approved", post="AST-001", by="Approver", via="phiên",
              note="Duyệt đề tài này", at=datetime.fromisoformat("2026-11-16T10:00:00+07:00"))
     assert RP.cmd_init(post) == 0
-    assert RP.cmd_approve(post, "Duc", "Duyệt bài Facebook", "fb", "", "") == 0
+    assert RP.cmd_approve(post, "Approver", "Duyệt bài Facebook", "fb", "", "") == 0
     _set_qa(post, "passed")
     ledger = DeliveryLedger(tmp_path / "ledger.sqlite3")
     g1, g2 = _scope("g1"), _scope("g2", "AST-001-fb")
@@ -269,7 +269,7 @@ def test_g2_reader_rejects_junction_folder_even_when_target_inside_campaign(post
                             them_cot=True, chi_cap_nhat=True)
     md_io.write_fm(post.parent / "campaign.md", fm, body)
     assert RP.cmd_init(post) == 0
-    assert RP.cmd_approve(post, "Duc", "Duyệt G2", "fb", "", "") == 0
+    assert RP.cmd_approve(post, "Approver", "Duyệt G2", "fb", "", "") == 0
     _set_qa(post, "passed")
     with pytest.raises(ValueError):
         AG.read_delivery_gate_proof(post.parent, _scope("g2", "AST-001-fb"))
@@ -299,11 +299,11 @@ def test_payload_binding_changes_on_account_or_content(post):
                             them_cot=True, chi_cap_nhat=True)
     md_io.write_fm(post.parent / "campaign.md", fm, body)
     assert RP.cmd_init(post) == 0
-    assert RP.cmd_approve(post, "Duc", "Duyệt G2", "fb", "", "") == 0
+    assert RP.cmd_approve(post, "Approver", "Duyệt G2", "fb", "", "") == 0
     _set_qa(post, "passed")
     assert hasattr(RP, "bind_delivery_payload"), "payload binding writer missing"
     binding = RP.bind_delivery_payload(post, station_root=post.parents[2], scope=_scope("g2", "AST-001-fb"),
-                                       payload=_payload(), by="Duc", quote="Duyệt bản xem trước")
+                                       payload=_payload(), by="Approver", quote="Duyệt bản xem trước")
     assert binding["payload_digest"] and binding["event_id"]
     assert AG.verify_delivery_payload(post.parent, _scope("g2", "AST-001-fb"), _payload())
     for changed in ({**_payload(), "account_id": "page2"}, {**_payload(), "text": "Đã đổi"},
@@ -382,14 +382,14 @@ def test_payload_binding_cannot_write_duplicate_post_outside_source_folder(post)
                             them_cot=True, chi_cap_nhat=True)
     md_io.write_fm(post.parent / "campaign.md", fm, body)
     assert RP.cmd_init(post) == 0
-    assert RP.cmd_approve(post, "Duc", "Duyệt G2", "fb", "", "") == 0
+    assert RP.cmd_approve(post, "Approver", "Duyệt G2", "fb", "", "") == 0
     _set_qa(post, "passed")
     other = post.parent / "other"
     other.mkdir()
     (other / "publish.json").write_bytes((post / "publish.json").read_bytes())
     with pytest.raises(ValueError):
         RP.bind_delivery_payload(other, station_root=post.parents[2], scope=_scope("g2", "AST-001-fb"),
-                                 payload=_payload(), by="Duc", quote="Duyệt bản xem trước")
+                                 payload=_payload(), by="Approver", quote="Duyệt bản xem trước")
     assert "delivery_binding" not in (other / "publish.json").read_text(encoding="utf-8")
 
 
@@ -400,16 +400,16 @@ def test_preview_binding_requires_new_explicit_words_and_keeps_prior_event(post)
                             them_cot=True, chi_cap_nhat=True)
     md_io.write_fm(post.parent / "campaign.md", fm, body)
     assert RP.cmd_init(post) == 0
-    assert RP.cmd_approve(post, "Duc", "Duyệt G2", "fb", "", "") == 0
+    assert RP.cmd_approve(post, "Approver", "Duyệt G2", "fb", "", "") == 0
     _set_qa(post, "passed")
     with pytest.raises(ValueError):
         RP.bind_delivery_payload(post, station_root=post.parents[2], scope=_scope("g2", "AST-001-fb"),
-                                 payload=_payload(), by="Duc", quote=" ")
+                                 payload=_payload(), by="Approver", quote=" ")
     first = RP.bind_delivery_payload(post, station_root=post.parents[2], scope=_scope("g2", "AST-001-fb"),
-                                     payload=_payload(), by="Duc", quote="Duyệt bản một")
+                                     payload=_payload(), by="Approver", quote="Duyệt bản một")
     revised = {**_payload(), "text": "Bản hai"}
     second = RP.bind_delivery_payload(post, station_root=post.parents[2], scope=_scope("g2", "AST-001-fb"),
-                                      payload=revised, by="Duc", quote="Duyệt bản hai")
+                                      payload=revised, by="Approver", quote="Duyệt bản hai")
     data = json.loads((post / "publish.json").read_text(encoding="utf-8"))
     review = next(p for p in data["posts"] if p["post_id"] == "AST-001-fb")["review"]
     assert first["event_id"] != second["event_id"]

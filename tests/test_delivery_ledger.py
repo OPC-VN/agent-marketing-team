@@ -102,7 +102,7 @@ def test_revoke_inflight_preserves_unknown(tmp_path, key):
     ledger = module().DeliveryLedger(tmp_path / 'ledger.sqlite3')
     intent = ledger.prepare(key, 'digest', 'legacy', 1, scopes=bindings(ledger, key))
     attempt = ledger.claim(intent, 1, verifier=proof)
-    assert ledger.revoke(intent, 1, by='Duc', quote='Dừng', gate='g2') == 'unknown'
+    assert ledger.revoke(intent, 1, by='Approver', quote='Dừng', gate='g2') == 'unknown'
     with pytest.raises(ValueError):
         ledger.resolve(intent, attempt, 'published')
 
@@ -111,7 +111,7 @@ def test_late_response_after_revoke_retains_remote_id_but_stays_unknown(tmp_path
     ledger = module().DeliveryLedger(tmp_path / 'ledger.sqlite3')
     intent = ledger.prepare(key, 'digest', 'postiz', 1, scopes=bindings(ledger, key))
     attempt = ledger.claim(intent, 1, verifier=proof)
-    assert ledger.revoke(intent, 1, by='Duc', quote='Dừng', gate='g2') == 'unknown'
+    assert ledger.revoke(intent, 1, by='Approver', quote='Dừng', gate='g2') == 'unknown'
     ledger.resolve(intent, attempt, 'submitted', remote_job_id='late-job',
                    provider_instance_id='instance', integration_id='integration')
     result = ledger.get(intent)
@@ -125,7 +125,7 @@ def test_late_published_response_does_not_auto_publish_after_revoke(tmp_path, ke
     ledger = module().DeliveryLedger(tmp_path / 'ledger.sqlite3')
     intent = ledger.prepare(key, 'digest', 'postiz', 1, scopes=bindings(ledger, key))
     attempt = ledger.claim(intent, 1, verifier=proof)
-    ledger.revoke(intent, 1, by='Duc', quote='Dừng', gate='g2')
+    ledger.revoke(intent, 1, by='Approver', quote='Dừng', gate='g2')
     ledger.resolve(intent, attempt, 'published', remote_job_id='late-job',
                    platform_post_id='late-post', evidence_kind='platform_readback')
     assert ledger.get(intent)['state'] == 'unknown'
@@ -140,7 +140,7 @@ def test_revoke_racing_response_never_loses_job_id(tmp_path, key):
     attempt = ledger.claim(intent, 1, verifier=proof)
 
     def revoke():
-        return Ledger(db).revoke(intent, 1, by='Duc', quote='Dừng', gate='g2')
+        return Ledger(db).revoke(intent, 1, by='Approver', quote='Dừng', gate='g2')
 
     def respond():
         return Ledger(db).resolve(intent, attempt, 'submitted', remote_job_id='job-race',
@@ -160,7 +160,7 @@ def test_revoked_scope_cannot_authorize_new_occurrence(tmp_path, key):
     scopes = bindings(ledger, key)
     scope = scopes[1][0]
     original = ledger.prepare(key, 'digest', 'legacy', 1, scopes=scopes)
-    ledger.revoke_scope(scope, 1, by='Duc', quote='Thu hồi', gate='g2')
+    ledger.revoke_scope(scope, 1, by='Approver', quote='Thu hồi', gate='g2')
     assert ledger.get(original)['state'] == 'cancelled'
     key['occurrence_key'] = 'repost-2'
     with pytest.raises(ValueError, match='generation'):
@@ -175,9 +175,9 @@ def test_scope_revoke_without_intents_is_audited(tmp_path, key):
     scope = {k: key[k] for k in ('station_id', 'channel_id', 'campaign_id', 'content_id', 'post_id')}
     scope['gate'] = 'g2'
     ledger.bind_scope(scope, 1)
-    ledger.revoke_scope(scope, 1, by='Duc', quote='Thu hồi', gate='g2')
+    ledger.revoke_scope(scope, 1, by='Approver', quote='Thu hồi', gate='g2')
     with sqlite3.connect(db) as con:
-        assert con.execute('SELECT actor,quote,gate FROM scope_events').fetchone() == ('Duc', 'Thu hồi', 'g2')
+        assert con.execute('SELECT actor,quote,gate FROM scope_events').fetchone() == ('Approver', 'Thu hồi', 'g2')
 
 
 def test_receipt_ids_survive_restart(tmp_path, key):
@@ -269,7 +269,7 @@ def test_backup_does_not_overwrite_concurrent_destination(tmp_path, monkeypatch)
 
 
 def proof(scope, digest='a' * 64):
-    return {'gate': scope['gate'], 'scope': scope.copy(), 'by': 'Duc',
+    return {'gate': scope['gate'], 'scope': scope.copy(), 'by': 'Approver',
             'quote': 'Duyet', 'source_digest': digest}
 
 
@@ -298,7 +298,7 @@ def test_reapprove_rejects_changed_source_without_new_approval_identity(tmp_path
     scopes = bindings(ledger, key)
     scope = scopes[1][0]
     ledger.bind_scope_proof(scope, 1, verifier=proof)
-    assert ledger.revoke_scope(scope, 1, by='Duc', quote='Dung', gate='g2') == 2
+    assert ledger.revoke_scope(scope, 1, by='Approver', quote='Dung', gate='g2') == 2
     with pytest.raises(ValueError, match='proof'):
         ledger.reapprove_scope(scope, 2, verifier=proof)
     with pytest.raises(ValueError, match='proof'):
@@ -441,10 +441,10 @@ def scheduled_ledger(tmp_path, key):
 
 def test_cancel_claim_is_durable_and_only_matching_confirmation_cancels(tmp_path, key):
     ledger, intent = scheduled_ledger(tmp_path, key)
-    cancel_id = ledger.begin_cancel(intent, by='Duc', quote='Hủy lịch')
+    cancel_id = ledger.begin_cancel(intent, by='Approver', quote='Hủy lịch')
     assert ledger.get(intent)['state'] == 'cancelling'
     with pytest.raises(ValueError):
-        ledger.begin_cancel(intent, by='Duc', quote='Hủy lịch')
+        ledger.begin_cancel(intent, by='Approver', quote='Hủy lịch')
     evidence = {'state': 'cancelled', 'platform': 'facebook', 'account_id': 'page',
                 'provider_instance_id': 'instance-1', 'integration_id': 'integration-1',
                 'remote_job_id': 'job-1', 'remote_post_id': None,
@@ -456,11 +456,11 @@ def test_cancel_claim_is_durable_and_only_matching_confirmation_cancels(tmp_path
 
 def test_cancel_timeout_is_unknown_and_cannot_retry(tmp_path, key):
     ledger, intent = scheduled_ledger(tmp_path, key)
-    cancel_id = ledger.begin_cancel(intent, by='Duc', quote='Hủy lịch')
+    cancel_id = ledger.begin_cancel(intent, by='Approver', quote='Hủy lịch')
     assert ledger.finish_cancel(intent, cancel_id, outcome='unknown') == 'unknown'
     assert ledger.get(intent)['state'] == 'unknown'
     with pytest.raises(ValueError):
-        ledger.begin_cancel(intent, by='Duc', quote='Hủy lịch')
+        ledger.begin_cancel(intent, by='Approver', quote='Hủy lịch')
 
 
 def test_cancel_two_workers_only_one_claims(tmp_path, key):
@@ -468,7 +468,7 @@ def test_cancel_two_workers_only_one_claims(tmp_path, key):
     Ledger = module().DeliveryLedger
     def claim_cancel():
         try:
-            return Ledger(ledger.path).begin_cancel(intent, by='Duc', quote='Hủy lịch')
+            return Ledger(ledger.path).begin_cancel(intent, by='Approver', quote='Hủy lịch')
         except ValueError:
             return None
     with ThreadPoolExecutor(max_workers=2) as pool:
@@ -479,7 +479,7 @@ def test_cancel_two_workers_only_one_claims(tmp_path, key):
 
 def test_crash_after_cancel_claim_recovers_as_unknown(tmp_path, key):
     ledger, intent = scheduled_ledger(tmp_path, key)
-    cancel_id = ledger.begin_cancel(intent, by='Duc', quote='Hủy lịch')
+    cancel_id = ledger.begin_cancel(intent, by='Approver', quote='Hủy lịch')
     restarted = module().DeliveryLedger(ledger.path)
     assert restarted.finish_cancel(intent, cancel_id, outcome='unknown') == 'unknown'
     with pytest.raises(ValueError):
@@ -488,7 +488,7 @@ def test_crash_after_cancel_claim_recovers_as_unknown(tmp_path, key):
 
 def test_cancel_confirmation_must_match_remote_job(tmp_path, key):
     ledger, intent = scheduled_ledger(tmp_path, key)
-    cancel_id = ledger.begin_cancel(intent, by='Duc', quote='Hủy lịch')
+    cancel_id = ledger.begin_cancel(intent, by='Approver', quote='Hủy lịch')
     wrong = {'state': 'cancelled', 'platform': 'facebook', 'account_id': 'page',
              'provider_instance_id': 'instance-1', 'integration_id': 'integration-1',
              'remote_job_id': 'wrong', 'remote_post_id': None, 'evidence_kind': 'provider_confirmed'}
@@ -577,7 +577,7 @@ def test_single_legacy_import_rejects_unsafe_reference(tmp_path, key, invalid):
 
 def test_late_cancel_confirmation_can_resolve_unknown_without_retry(tmp_path, key):
     ledger, intent = scheduled_ledger(tmp_path, key)
-    cancel_id = ledger.begin_cancel(intent, by='Duc', quote='Hủy lịch')
+    cancel_id = ledger.begin_cancel(intent, by='Approver', quote='Hủy lịch')
     assert ledger.finish_cancel(intent, cancel_id, outcome='unknown') == 'unknown'
     evidence = {'state': 'cancelled', 'platform': 'facebook', 'account_id': 'page',
                 'provider_instance_id': 'instance-1', 'integration_id': 'integration-1',
@@ -589,7 +589,7 @@ def test_late_cancel_confirmation_can_resolve_unknown_without_retry(tmp_path, ke
     assert ledger.get(intent)['state'] == 'unknown'
     assert ledger.finish_cancel(intent, cancel_id, outcome='confirmed', verifier=lambda _: evidence) == 'cancelled'
     with pytest.raises(ValueError):
-        ledger.begin_cancel(intent, by='Duc', quote='Hủy lại')
+        ledger.begin_cancel(intent, by='Approver', quote='Hủy lại')
 
 
 def test_station_identity_create_once_and_reopen_with_independent_anchor(tmp_path):

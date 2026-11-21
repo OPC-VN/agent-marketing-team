@@ -14,7 +14,7 @@ import md_io  # noqa: E402
 
 def test_unverified_projection_does_not_change_campaign_or_published_state(post):
     assert RP.cmd_init(post) == 0
-    assert RP.cmd_approve(post, "Duc", "Đồng ý bài thử", "fb", "", "") == 0
+    assert RP.cmd_approve(post, "Approver", "Đồng ý bài thử", "fb", "", "") == 0
     with pytest.raises(ValueError, match="ledger"):
         RP.cmd_set(post, "fb", "https://facebook.com/1_2", "1_2", "2_3", "", False,
                    projection_complete=False)
@@ -29,7 +29,7 @@ def test_unverified_projection_does_not_change_campaign_or_published_state(post)
 
 def test_completion_cannot_be_asserted_by_opt_in_caller_without_proof(post):
     assert RP.cmd_init(post) == 0
-    assert RP.cmd_approve(post, "Duc", "Đồng ý bài thử", "fb", "", "") == 0
+    assert RP.cmd_approve(post, "Approver", "Đồng ý bài thử", "fb", "", "") == 0
     with pytest.raises(ValueError, match="ledger proof"):
         RP.cmd_set(post, "fb", "https://facebook.com/1_2", "1_2", "2_3", "", False,
                    projection_complete=True)
@@ -39,7 +39,7 @@ def test_completion_cannot_be_asserted_by_opt_in_caller_without_proof(post):
 
 def test_partial_projection_rejects_unverified_result(post):
     assert RP.cmd_init(post) == 0
-    assert RP.cmd_approve(post, "Duc", "Đồng ý bài thử", "fb", "", "") == 0
+    assert RP.cmd_approve(post, "Approver", "Đồng ý bài thử", "fb", "", "") == 0
     with pytest.raises(ValueError, match="verify"):
         RP.cmd_set(post, "fb", "https://facebook.com/1_2", "1_2", "2_3", "", True,
                    projection_complete=False)

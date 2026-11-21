@@ -400,8 +400,8 @@ def prepare_package(
                 raise ValueError("media requires an explicit V1 asset_ref")
             package["media"] = _copy_media(source_dir, reference, staged, kind)
         canonical_snapshot(package)
-        (staged / "package.json").write_text(json.dumps(package, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        (staged / "review.html").write_text(_review_html(package), encoding="utf-8")
+        (staged / "package.json").write_text(json.dumps(package, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+        (staged / "review.html").write_text(_review_html(package), encoding="utf-8", newline="\n")
         staged.rename(output_dir)
     return output_dir
 
