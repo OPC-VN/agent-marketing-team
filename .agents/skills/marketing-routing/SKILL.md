@@ -46,7 +46,7 @@ Chọn một skill chính và tối đa hai skill hỗ trợ có lý do. Đây l
 - Tư vấn chiến lược kênh chỉ đọc, chưa tạo campaign → vai `campaign-strategist` ở chế độ tư vấn (`.agents/roles/campaign-strategist.md`).
 - Vai chữ ở `.agents/roles/`: `campaign-strategist` (chế độ tư vấn chỉ-đọc khi chưa có campaign), `content-producer`, `seo-specialist`, `distribution-manager`, `growth-analyst`. Chọn vai khi việc là một vai thuần, không cần skill.
 - Reference theo đề (đường đầy đủ): giọng thương hiệu `knowledge/playbooks/BRAND_VOICE.md` · chấm ứng viên YouTube và Rights Gate `knowledge/playbooks/YOUTUBE_SCORING.md` · chẩn đoán tăng trưởng YouTube `knowledge/playbooks/YOUTUBE_GROWTH.md` · SEO kỹ thuật `knowledge/playbooks/SEO_TECHNICAL.md` · nghiên cứu thị trường `knowledge/playbooks/MARKET_RESEARCH.md` · giờ đăng và nhịp phân phối `knowledge/playbooks/MULTICHANNEL_PUBLISHING.md`. Chỉ đọc cái đề bài cần.
-- Giọng nói → `voice-routing`; dựng/ghép video → `video-routing`: đó là plugin khác, router này chỉ chỉ đường, không tự làm.
+- Giọng nói → `voice-routing`; dựng/ghép video → `video-routing`: đó là plugin khác, router này chỉ chỉ đường, không tự làm. Khi giao lời đọc sang đó, nhắc: kịch bản phải theo `vietnamese-tts-script.md` của `voice-routing` (chuẩn hoá từ nước ngoài + marker sắc thái lấy từ manifest của giọng); đa dạng đến từ marker, không đổi giọng.
 
 ## Kiểm chất lượng và dừng
 Kiểm tra skill có thật, mode khai báo, đầu vào/đầu ra và references liên quan trong catalog. Dừng phần phụ thuộc nếu thiếu nguồn, đường dẫn, quyết định quan trọng hoặc điều kiện cổng; nói rõ điều đang thiếu và bước hợp lệ kế tiếp.

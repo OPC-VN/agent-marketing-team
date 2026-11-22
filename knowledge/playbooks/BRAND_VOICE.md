@@ -79,6 +79,10 @@ Giữ dữ kiện tách khỏi ý kiến: câu vị thế không thay cho nguồ
 - Dùng lại hồ sơ đã xác nhận gần nhất cho các việc liên quan trong cùng phiên; đừng dựng lại từ đầu.
 - Muốn lưu thành tệp bền, chỉ lưu khi người dùng yêu cầu, và ở trạm, không ở repo.
 
+## 7. Giọng đọc (podcast, voiceover)
+
+Giọng viết là chuyện của hồ sơ này; giọng **đọc** do profile clone của trạm giọng giữ. Kịch bản đọc là văn nói: chuẩn hoá từ nước ngoài và gắn marker sắc thái (`[ten-marker]`, tên lấy từ manifest của profile, không tự đặt) theo skill `voice-routing` của plugin `agent-voice-studio` (`references/vietnamese-tts-script.md`, mục «Phân bổ sắc thái theo bố cục video»). Đa dạng đến từ marker, không đổi giọng giữa bài. Mẫu prompt podcast: `.agents/prompts/podcast-script-prompt.txt`.
+
 ## Liên kết
 - Khuôn hồ sơ: `output_styles/WEBSITE_BLOG_GUIDELINE.md` · Trạm: `templates/station/_channel/brand.md`
 - Kiểm bài: `.agents/checklists/QA_ASSET.md`, `.agents/roles/qa-reviewer.md`

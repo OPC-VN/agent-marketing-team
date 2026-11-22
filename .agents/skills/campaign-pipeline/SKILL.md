@@ -87,6 +87,7 @@ Không xoá feedback cũ.
 **Vào:** Post `review_status = approved`, theo cờ `Content.audio/video/short`.
 **Làm:** theo [`knowledge/toolchains/ASSET_TOOLCHAIN.md`](../../../knowledge/toolchains/ASSET_TOOLCHAIN.md) —
 HyperFrames render, OmniVoice lồng tiếng. Cờ `no` thì không dựng. Short **luôn hỏi xác nhận**.
+Lời đọc (podcast, voiceover) viết theo skill `voice-routing`: chuẩn hoá từ nước ngoài và gắn marker sắc thái của giọng (tên lấy từ manifest, đa dạng sắc thái đến từ marker, không đổi giọng giữa bài).
 **Ra:** file trong `folder_path`, `post_status = approved`.
 
 ### ⑥ `publish`
