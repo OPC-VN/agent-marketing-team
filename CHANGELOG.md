@@ -5,6 +5,20 @@ Mỗi mục là một phiên bản. Mục đầu luôn là số trong `pyproject
 
 **Chưa phát hành (sau 3.3.0, chưa đổi version):**
 
+- **Tái cấu trúc ba trạm (voice-station-restructure TK3, nhánh `feat/voice-restructure`).** (1) Giọng là CẤU HÌNH:
+  runner tin đọc `-Profile` → `campaign.md: runtime.voice_profile` → `channel.yml: voice_profile` → mặc định của
+  trạm (`brand-paths.ps1: Resolve-VoiceProfile`; `campaign_cfg.py` ghép sẵn + ghi `voice_profile_source`); **bỏ
+  `pick-voice.ps1`** (bảng series → giọng mang tên giọng thật). Thêm `-ResolveOnly` (chạy khô) cho
+  `run-toptoday-hot/run-weekly-news/run-weekly-repo/run-daily-truyen`. (2) Danh sách giọng qua
+  `voice-studio profiles list --json` (`lib/voice.py: list_profiles/inventory/profile_names`); `doctor` và pipeline
+  truyện thôi đọc thư mục kho (lệnh chưa có ⇒ lùi kho cũ + nói ra). (3) Pipeline truyện không còn neo vào
+  `<trạm giọng>/omnivoice` (`OMNIVOICE_DIR` không còn bắt buộc): ghi theo chiến dịch (`out/`, `work/`, `logs/`, qua
+  `TRUYEN_CAMPAIGN_DIR`), nhạc kênh ở `<trạm giọng>/music/channels/<kênh>/`, hình kênh ở `<trạm video>/assets/…`
+  (`channel.yml: media`), nháp ffmpeg ở `<trạm video>/scratch/story-titles`; trạm chưa dời ⇒ lùi cây cũ + cảnh báo.
+  `daily_truyen.py`: không còn tên giọng trong mã (`--voice-pool`/`--voice-default` từ cấu hình); giọng mặc định đổi
+  `Giọng tiên hiệp` → `giong-tien-hiep`. `Get-BgmDir` ưu tiên `station.json: bgm_dir` của trạm giọng.
+  Việc mở: `run-weekly-news.ps1` còn gọi module nội bộ video-studio; `story/make_video.py` chờ chuyển sang video-studio.
+
 - Dời `CLAUDE.md` ở gốc sang `.claude/CLAUDE.md` chứa dòng `@../AGENTS.md`: `claude plugin validate --strict` đỏ khi
   plugin có `CLAUDE.md` gốc («not loaded as project context»); `@import` tính đường từ file chứa nó, nên luật
   `AGENTS.md` nay được nạp thật khi mở phiên trong repo.

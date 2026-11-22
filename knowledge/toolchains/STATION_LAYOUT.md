@@ -120,7 +120,7 @@ Lệnh cụ thể và thứ tự sáu bước: [`RUNBOOK-DOI-MAY.md`](../../docs
 | `MARKETING_STUDIO_HOME` | thư mục repo nội dung | `run.ps1` đi lên từ thư mục chiến dịch tìm repo (embedded: cha của trạm); không thấy thì DỪNG |
 | `MARKETING_STUDIO_PY` | Python chạy các `.ps1` | `<repo>/.venv` → `python` → `python3` → `py`; khai mà hỏng thì **DỪNG** |
 | `VOICE_STATION` | gốc trạm giọng | tên cũ `OMNIVOICE_DIR` (trỏ **thư mục engine** bên trong, lùi một cấp là ra gốc) → `studio.local.json` → trạm của repo anh em `agent-voice-studio` cùng thư mục cha → coi như chưa cài |
-| `OMNIVOICE_PY` | Python venv trạm giọng — chỗ cài **cả hai** package | `station.json: venv` của trạm giọng (đường tương đối tính từ gốc trạm) → dò `omnivoice/.venv` → `.venv` của repo anh em `agent-video-studio`, rồi `agent-voice-studio` |
+| `OMNIVOICE_PY` | Python venv trạm giọng — chỗ cài **cả hai** package | `station.json: venv` của trạm giọng (đường tương đối tính từ gốc trạm) → (trạm cũ) dò `omnivoice/.venv` → `.venv` của repo anh em `agent-video-studio`, rồi `agent-voice-studio` |
 | `VOICES_DIR` | kho profile giọng | `<trạm giọng>/<engine>/voices` |
 | `VIDEO_STATION` | gốc trạm video | tên cũ `VIDEO_ROOT` → `studio.local.json` → trạm của repo anh em `agent-video-studio` cùng thư mục cha → coi như chưa cài |
 | `HYPERFRAMES_VERSION` | bản HyperFrames trạm video ghim | `station.json` của trạm video |

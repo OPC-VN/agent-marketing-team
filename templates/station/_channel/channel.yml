@@ -35,10 +35,21 @@ brand_voice: brand.md          # hồ sơ giọng nằm NGAY TRONG kênh, không
 # Khai một trong hai khoá dưới đây là nói "kênh này CẦN trạm giọng": từ đó `doctor` coi
 # trạm giọng là bắt buộc và báo mã 3 khi thiếu, thay vì để pipeline nổ giữa một lượt
 # render lúc 18h. Không khai = kênh chỉ có chữ, không ai bị đòi cài thêm gì.
-# `voice_profile` phải là tên một profile CÓ THẬT trong kho giọng (`voice-studio
-# make-profile` tạo ra) — `doctor` đối chiếu và báo mã 2 nếu khai một tên không tồn tại.
-# voice_profile:               # tên profile giọng đọc của kênh
+# `voice_profile` phải là tên một profile CÓ THẬT của trạm giọng (`voice-studio profiles list
+# --json`; `voice-studio make-profile` tạo ra) — `doctor` đối chiếu và báo mã 2 nếu khai một tên
+# không tồn tại. Giọng là CẤU HÌNH: runner đọc `-Profile` → `campaign.md: runtime.voice_profile`
+# → khoá này → không khai (voice-studio dùng profile mặc định của trạm). Một chiến dịch cần giọng
+# khác của kênh thì khai `voice_profile` trong khối `runtime:` của campaign.md của nó.
+# voice_profile:               # tên profile giọng đọc MẶC ĐỊNH của kênh
 # bgm_style:                   # style nhạc nền trong bgm-library.json của trạm giọng
+
+# Media của kênh (tuỳ chọn; chỉ kênh truyện/video cần). Tên file ASCII, KHÔNG đường dẫn — runner ghép:
+#   music     → <trạm giọng>/music/channels/<id kênh>/<tên>      (âm thanh ở trạm giọng)
+#   video_kit → <trạm video>/assets/channels/<id kênh>/<tên>     (hình ở trạm video;
+#               tên bắt đầu `shared/` → <trạm video>/assets/shared/…)
+# media:
+#   music:     { bgm: bgm-1.mp3, intro: intro.mp3, outro: outro.mp3 }
+#   video_kit: { background: background.mp4, logo: logo.png, title_fire: shared/overlays/overlay-fire.mp4 }
 
 # Giá trị hợp lệ của content_pillar CHO KÊNH NÀY. Mỗi kênh một bộ khác nhau —
 # đây là lý do bộ trụ cột không nên nằm cứng trong DATA_MODEL.

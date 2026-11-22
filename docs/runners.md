@@ -48,8 +48,34 @@ sẵn làm câu trả lời. Thứ tự, cho mọi đường:
 | Python giọng | `OMNIVOICE_PY` → `station.json: venv` → (máy có OpcOS) `$OPCOS_RUNTIME/venvs/agent-voice-studio/omnivoice` → `<trạm giọng>/omnivoice/.venv` → `.venv` của repo anh em video, rồi giọng |
 | Repo web | `repo` của `channel.yml` (hiểu `${TÊN}`, `~`, đường tương đối theo thư mục cha) |
 | last30days | `L30_SCRIPT` → thư mục plugin của Claude |
-| Nhạc nền | `VOICE_BGM_DIR` → `<trạm video>/assets/news-bgm` |
+| Nhạc nền | `VOICE_BGM_DIR` → `station.json: bgm_dir` của trạm giọng (`music/library`) → (cũ) `<trạm video>/assets/news-bgm` |
 | Con trỏ bí mật | `YT_TOKEN_PATH`, `YT_CLIENT_SECRET`, `FB_CONFIG`, `EMAIL_CONFIG` (+ hậu tố kênh) — chỉ ĐƯỜNG DẪN |
+
+### Giọng đọc, media và nơi ghi (voice-station-restructure)
+
+Ranh giới ba trạm: **nội dung + cấu hình kênh + log chạy** ở trạm marketing; **âm thanh** (giọng, nhạc) ở trạm giọng;
+**hình** (nền, logo, lửa tiêu đề, font) ở trạm video; **mã runner** ở repo này. Hệ quả cho runner:
+
+- **Giọng là CẤU HÌNH, không phải mã.** Runner tin đọc theo thứ tự: tham số `-Profile` → `campaign.md: runtime.voice_profile`
+  → `channel.yml: voice_profile` → không khai (`voice-studio` dùng profile mặc định của trạm). Hàm: `Resolve-VoiceProfile`
+  (`brand-paths.ps1`); bản chụp `campaign_cfg.py` mang `voice_profile` + `voice_profile_source`. Không còn `pick-voice.ps1`,
+  không còn bảng series → giọng trong mã; đa dạng giọng đến từ marker sắc thái trong kịch bản. Runner truyện thêm
+  `runtime.voice_pool` (luân phiên theo dải chương; state `voice` vẫn ép được).
+- **Danh sách giọng hỏi bằng `voice-studio profiles list --json`** (`scripts/lib/voice.py: list_profiles`), không đọc thư mục
+  kho. Lệnh chưa có (voice-studio cũ) thì `doctor` lùi đọc kho kiểu phẳng và nói ra một dòng.
+- **Chạy khô:** `run-toptoday-hot.ps1 | run-weekly-news.ps1 | run-weekly-repo.ps1 -Config <config.json> -ResolveOnly` và
+  `run-daily-truyen.ps1 -Campaign <thư mục> -ResolveOnly` chỉ phân giải giọng + đường, in ra rồi thoát 0 (không nghiên cứu,
+  không TTS, không đăng).
+- **Truyện** ghi theo chiến dịch: `<chiến dịch>/out` (thành phẩm) · `work` (cache + `_resume.json`) · `logs`. Runner đưa thư
+  mục chiến dịch cho tiến trình con qua `TRUYEN_CAMPAIGN_DIR`. Nhạc/intro/outro ở `<trạm giọng>/music/channels/<kênh>/`,
+  hình ở `<trạm video>/assets/channels/<kênh>/` + `assets/shared/` — tên file khai ở `channel.yml: media.music.*` /
+  `media.video_kit.*` (xem `templates/station/_channel/channel.yml`). Trạm chưa dời thì lùi về cây cũ
+  `<trạm giọng>/omnivoice/…` kèm cảnh báo. Không còn script nào BẮT BUỘC `OMNIVOICE_DIR`.
+- **Log:** runner ghi `<kênh>/<chiến dịch>/logs/`; log tầng lịch (wrapper) ở `logs/scheduler/<nhãn>/` của trạm marketing —
+  cả hai bị `.gitignore` trạm chặn. Wrapper `notify-run.ps1` chưa có tham số `-LogDir` (đề xuất DN7, việc của hạ tầng).
+- **Việc mở:** (1) `run-weekly-news.ps1` còn gọi module nội bộ `video_studio.templates.news.daily_news_media` — chờ lệnh
+  `video-studio … --json` tương ứng (audio từng mục + chèn HTML) ở repo video; (2) `story/make_video.py` là bộ dựng video
+  nằm trong marketing — về lâu dài là template `story` của video-studio.
 
 Bảng biến đầy đủ: `knowledge/toolchains/SECRETS.md`. Cổng giữ luật: `tests/test_runners_portable.py`,
 `tests/test_ps1_portable.py`, `tests/test_khong_gia_dinh_thu_muc_cha.py`.

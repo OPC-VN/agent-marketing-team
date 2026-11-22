@@ -184,7 +184,8 @@ khoá `env`/`vars` của `launchd.json` (`docs/launchd.md`).
 |---|---|---|
 | `L30_SCRIPT` | runner tin (`Find-Last30Days`), `doctor` — script nghiên cứu `last30days` | thư mục plugin của Claude (`<CLAUDE_CONFIG_DIR>` hoặc `~/.claude`)`/plugins/marketplaces/*/…` → `…/plugins/cache/*/last30days/<bản mới nhất>/…`; không thấy thì runner DỪNG trước `claude -p` |
 | `CLAUDE_CONFIG_DIR` | như trên — gốc cấu hình Claude Code nếu không phải `~/.claude` | `~/.claude` |
-| `VOICE_BGM_DIR` | runner tin, `doctor` — thư viện nhạc nền (`bgm-library.json` + `<style>.mp3`) | `<trạm video>/assets/news-bgm` |
+| `TRUYEN_CAMPAIGN_DIR` | pipeline truyện (`run-daily-truyen.ps1` đặt, `story/truyen_paths.py` đọc) — thư mục chiến dịch = nơi ghi `out/` · `work/` · `logs/`. **Do runner đặt, đừng khai tay** (chạy tay một script lẻ thì đặt nó trước) | không đặt ⇒ cây cũ `<trạm giọng>/omnivoice/truyen-out` hoặc nháp `<trạm giọng>/out/truyen`, kèm cảnh báo |
+| `VOICE_BGM_DIR` | runner tin, `doctor` — thư viện nhạc nền (`bgm-library.json` + `<style>.mp3`); LEGACY, gỡ sau khi trạm giọng dời | `station.json: bgm_dir` của trạm giọng (`music/library`) → (cũ) `<trạm video>/assets/news-bgm` |
 | `YT_TOKEN_PATH__NGHE_TIEN_TRUYEN` | `run-daily-truyen.ps1`, `story/daily_truyen.py`, `story/truyen_publish.py` — token kênh truyện | không đăng (log nêu tên biến); không có đường lùi viết trong mã |
 | `YT_CLIENT_SECRET__NGHE_TIEN_TRUYEN` | `run-daily-truyen.ps1` — thay `YT_CLIENT_SECRET` cho riêng lượt truyện | dùng `YT_CLIENT_SECRET` |
 | `TRUYEN_PUBLISH_PY` | `story/truyen_paths.py` — python cho bước đăng truyện | `python`/`python3`/`py -3` import được `googleapiclient` → python đang chạy |
