@@ -133,10 +133,13 @@ def test_daily_truyen_xoay_daily_logs_canh_sweep_old():
 
 
 def test_daily_truyen_xoay_that(tmp_path, monkeypatch):
-    monkeypatch.setenv("OMNIVOICE_DIR", str(tmp_path / "engine"))
+    # TRUYEN_CAMPAIGN_DIR đặt qua monkeypatch: `use_campaign` ghi nó vào os.environ, teardown trả lại nguyên trạng.
+    monkeypatch.setenv("TRUYEN_CAMPAIGN_DIR", str(tmp_path))
     sys.path.insert(0, str(RUNNERS / "story"))
     dt = importlib.reload(importlib.import_module("daily_truyen"))
+    dt.use_campaign(str(tmp_path / "truyen-state.json"))
     logs = Path(dt.LOGDIR)
+    assert logs == tmp_path / "logs", "log truyện nằm trong chiến dịch, không ở cwd hay trạm giọng"
     cu = _file(logs / "pntt_1-10_20260701.log", b"cu\n", 61 * NGAY)
     state = _file(logs / "_heal_state.json", b"{}", 61 * NGAY)
     ghi = []

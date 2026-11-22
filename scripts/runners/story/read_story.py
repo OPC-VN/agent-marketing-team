@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 read_story.py — crawl chapters from tamhoan.com and read them aloud with OmniVoice,
-using a saved voice profile (default: "Giọng tiên hiệp") for a consistent narrator.
+using a saved voice profile (default: "giong-tien-hiep") for a consistent narrator.
 
 Pipeline (per the spec):
   1. Fetch a chapter page, extract ONLY the story text:
@@ -18,7 +18,7 @@ Uses the published voice-studio engine API (voice_studio.engine: load / synth / 
 so CLI and agent paths stay identical. Runs offline on GPU.
 
 Example:
-  python read_story.py --start-id 107258 --chapters 2 --voice "Giọng tiên hiệp"
+  python read_story.py --start-id 107258 --chapters 2 --voice giong-tien-hiep
 """
 import argparse
 import os
@@ -56,9 +56,8 @@ def _add_bgm(mp3_path, music_path, vol, total_dur):
     print(f"[bgm] đã ghép nhạc nền (vol {vol}) -> {mp3_path}")
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-# Da doi sang apps/truyen/ (2026-08-26); du lieu van o goc engine.
+# Chỗ ghi theo chiến dịch (TRUYEN_CAMPAIGN_DIR) — xem truyen_paths.layout().
 import truyen_paths  # noqa: E402  — phân giải Windows + macOS
-ENGINE = truyen_paths.engine_dir()
 
 BASE = "https://tamhoan.com/{slug}/{id}"
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
@@ -794,8 +793,8 @@ def main():
     ap.add_argument("--end-chapter", dest="end_chapter", type=int, default=None,
                     help="Số chương kết thúc (dùng cùng --start-chapter).")
     ap.add_argument("--chapters", type=int, default=2, help="Số chương (nếu không dùng --end-chapter).")
-    ap.add_argument("--voice", default="Giọng tiên hiệp", help="Saved voice profile name.")
-    ap.add_argument("--out-dir", default=None, help="Output dir (default truyen-out/<slug>).")
+    ap.add_argument("--voice", default=truyen_paths.DEFAULT_VOICE, help="Saved voice profile name.")
+    ap.add_argument("--out-dir", default=None, help="Output dir (default <campaign>/work/<slug>).")
     ap.add_argument("--speed", type=float, default=1.0)
     ap.add_argument("--gap-chapter", type=float, default=60.0, help="Silence between chapters (s).")
     ap.add_argument("--lead-in", dest="lead_in", type=float, default=0.0,
@@ -860,7 +859,7 @@ def main():
     elif start_id is None:
         ap.error("cần --start-id hoặc --start-chapter")
 
-    out_dir = args.out_dir or os.path.join(ENGINE, "truyen-out", slug)
+    out_dir = args.out_dir or os.path.join(truyen_paths.layout()["scratch"], slug)
     cache_dir = os.path.join(out_dir, "cache")
     os.makedirs(out_dir, exist_ok=True)
 

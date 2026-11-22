@@ -290,12 +290,17 @@ def test_luot_THEO_LICH_gap_dau_publish_cung_dai_thi_DUNG_khong_dang_lai():
 
 def _daily(tmp_path, monkeypatch):
     import importlib
-    eng = tmp_path / "omnivoice"
-    (eng / "truyen-out").mkdir(parents=True)
-    monkeypatch.setenv("OMNIVOICE_DIR", str(eng))
+    # Chiến dịch = thư mục chứa state (`tmp_path`); dấu resume + cache ở `<chiến dịch>/work` (= "eng" cũ).
+    eng = tmp_path / "work"
+    eng.mkdir(parents=True)
+    monkeypatch.setenv("TRUYEN_CAMPAIGN_DIR", str(tmp_path))     # main() ghi nó vào os.environ; teardown trả lại
     sys.path.insert(0, str(STORY))
     import daily_truyen
     dt = importlib.reload(daily_truyen)
+
+    def _khong_chay(*a, **k):
+        raise AssertionError("test chặn đăng trùng KHÔNG được chạm tới bước dựng/đăng thật: " + repr(a[:1]))
+    monkeypatch.setattr(dt.subprocess, "run", _khong_chay)      # lưới an toàn: dấu lệch chỗ = lỗi, không chạy pipeline
     st = tmp_path / "truyen-state.json"
     st.write_text(json.dumps({"slug": "pntt-p2", "site": "pntt2", "batch": 10, "last_end": 300,
                               "next_url": "https://x/chuong-301", "last_publish_ok": True}),
@@ -304,7 +309,7 @@ def _daily(tmp_path, monkeypatch):
 
 
 def _dau_publish(eng, slug="pntt-p2", start=301, end=310, voice="a-tun-v1"):
-    m = eng / "truyen-out" / RO.RESUME_MARK
+    m = eng / RO.RESUME_MARK
     m.write_text(json.dumps({"slug": slug, "start": start, "end": end, "voice": voice,
                              "cache_dir": "pntt-p2__atunv1", "phase": "publish", "act_start": 301,
                              "act_end": 312, "next_url": "https://x/chuong-313"}), encoding="utf-8")
@@ -322,7 +327,7 @@ def test_luot_dem_sau_cung_dai_DUNG_khong_sweep_khong_ghi_de_dau(tmp_path, monke
     dt, eng, st = _daily(tmp_path, monkeypatch)
     m = _dau_publish(eng, voice="giong-khac")          # khớp theo slug + dải, KHÔNG theo giọng
     cu = m.read_text(encoding="utf-8")
-    rac = eng / "truyen-out" / "pntt-p2__atun"          # thứ sweep_old sẽ xoá nếu chạy
+    rac = eng / "pntt-p2__atun"                         # thứ sweep_old sẽ xoá nếu chạy
     rac.mkdir()
     assert _main(dt, monkeypatch, "--state", str(st)) == 1
     assert m.read_text(encoding="utf-8") == cu and rac.is_dir()

@@ -22,33 +22,41 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-# Script da doi sang apps/truyen/ (2026-08-26). DU LIEU (venv, assets, truyen-out,
-# _vtitles, voices) VAN O GOC ENGINE - neo vao day, khong neo vao HERE.
+# Ranh giới ba trạm (DN11): ÂM THANH (nhạc nền, intro/outro) ở `<trạm giọng>/music/channels/<kênh>/`;
+# HÌNH (nền, logo, lửa tiêu đề, font) ở `<trạm video>/assets/channels/<kênh>/` + `assets/shared/`.
+# Tên file khai ở `channel.yml: media` (ASCII). Trạm chưa dời (TK5) ⇒ lùi về `<trạm giọng>/omnivoice/
+# assets/<tên cũ>` + cảnh báo — xem truyen_paths.media_file. Asset để LOCAL, CỐ Ý không đọc thẳng
+# từ thư mục đồng bộ đám mây (07/2026 đổi tài khoản đồng bộ làm mọi hardcode cũ chết).
 import truyen_paths  # noqa: E402  — phân giải Windows + macOS
-ENGINE = truyen_paths.engine_dir()
-# Asset (nền/nhạc/logo/lửa) để LOCAL trong trạm giọng — CỐ Ý không đọc thẳng từ thư mục
-# đồng bộ đám mây: 07/2026 đổi tài khoản đồng bộ làm mọi hardcode cũ chết, pipeline đứt mà
-# không ai biết. Bản local còn tránh luôn rủi ro tệp chỉ-trên-mây treo >60s.
-# Nguồn gốc (đồng bộ tay khi đổi asset): …\Nghe Tiên Truyện\2. Raw Media\Ảnh & Media
-ASSETS = os.path.join(ENGINE, "assets")
-# Bản "clean" re-encode 1 luồng (bản gốc có frame hỏng làm h264 segfault khi loop video 2 tiếng).
-BG = os.path.join(ASSETS, "Background Image Tiên hiệp 1 clean.mp4")
-if not os.path.isfile(BG):
-    BG = os.path.join(ASSETS, "Background Image Tiên hiệp 1.mp4")
-BGM = os.path.join(ASSETS, "Nhạc nền tiên hiệp 1.mp3")
-OUTRO = os.path.join(ASSETS, "Outro PNTT.mp3")
-INTRO = os.path.join(ASSETS, "Intro PNTT.mp3")
-LOGO = os.path.join(ASSETS, "Logo nghe tiên truyện 2.png")
-FIRE = os.path.join(ASSETS, "Lửa tiêu đề clean.mp4")  # clip lửa-trên-nền-đen (Mixkit License)
-if not os.path.isfile(FIRE):  # bản gốc có frame hỏng → h264 crash khi loop; dùng bản clean re-encode
-    FIRE = os.path.join(ASSETS, "Lửa tiêu đề.mp4")
+
+
+def _vk(key, *legacy):
+    """Hình của kênh: đường mới trước, rồi từng tên cũ (bản "clean" re-encode 1 luồng đứng trước bản gốc
+    có frame hỏng làm h264 segfault khi loop video 2 tiếng)."""
+    for ten in legacy:
+        p = truyen_paths.media_file("video_kit", key, ten)
+        if p:
+            return p
+    return ""
+
+
+BG = _vk("background", "Background Image Tiên hiệp 1 clean.mp4", "Background Image Tiên hiệp 1.mp4")
+BGM = truyen_paths.media_file("music", "bgm", "Nhạc nền tiên hiệp 1.mp3")
+OUTRO = truyen_paths.media_file("music", "outro", "Outro PNTT.mp3")
+INTRO = truyen_paths.media_file("music", "intro", "Intro PNTT.mp3")
+LOGO = _vk("logo", "Logo nghe tiên truyện 2.png")
+FIRE = _vk("title_fire", "Lửa tiêu đề clean.mp4", "Lửa tiêu đề.mp4")  # lửa-trên-nền-đen (Mixkit License)
 # Font + title textfiles live INSIDE TITLE_DIR and are referenced by RELATIVE name from there
 # (ffmpeg is run with cwd=TITLE_DIR). A drive-letter ':' inside a filtergraph path makes ffmpeg's
 # parser fail no matter how it's escaped, so we avoid colons in filtergraph paths entirely.
-# Font tiêu đề phải có dấu tiếng Việt: TRUYEN_FONT → <engine>/assets/fonts/title.ttf → font hệ
-# thống theo OS (Windows arialbd.ttf, macOS Arial Bold.ttf). Thiếu thì DỪNG, không im lặng mất dấu.
-# Phân giải LÚC DỰNG (main), không lúc import.
-TITLE_DIR = os.path.join(ENGINE, "_vtitles")   # KHONG hardcode duong dan may
+# Font tiêu đề phải có dấu tiếng Việt: TRUYEN_FONT → <trạm video>/assets/shared/fonts/title.ttf →
+# font hệ thống theo OS (Windows arialbd.ttf, macOS Arial Bold.ttf). Thiếu thì DỪNG, không im lặng
+# mất dấu. Phân giải LÚC DỰNG (main), không lúc import.
+# Thư mục NHÁP của ffmpeg (xoá sạch mỗi lượt): `<trạm video>/scratch/story-titles` — nháp là của trạm
+# video; chưa biết trạm video thì `<chiến dịch>/work/_vtitles`.
+_VS = truyen_paths.video_station()
+TITLE_DIR = (os.path.join(_VS, "scratch", "story-titles") if _VS
+             else os.path.join(truyen_paths.layout()["scratch"], "_vtitles"))   # KHONG hardcode duong dan may
 
 
 def ffexe(name):
@@ -182,8 +190,12 @@ def main():
     args = ap.parse_args()
 
     bgm = os.path.abspath(args.bgm_file) if args.bgm_file else BGM
-    if not os.path.isfile(bgm):
-        raise SystemExit(f"Không thấy file nhạc nền: {bgm}")
+    if not (bgm and os.path.isfile(bgm)):
+        raise SystemExit(f"Không thấy file nhạc nền: {bgm or '(chưa khai)'} — nhạc kênh ở "
+                         f"<trạm giọng>/music/channels/<kênh>/ (channel.yml: media.music.bgm).")
+    if not (BG and os.path.isfile(BG)):
+        raise SystemExit("Không thấy video nền — nền kênh ở <trạm video>/assets/channels/<kênh>/ "
+                         "(channel.yml: media.video_kit.background).")
 
     man = json.load(open(args.manifest, encoding="utf-8"))
     voice = man["audio"]
@@ -200,7 +212,7 @@ def main():
                 os.remove(os.path.join(TITLE_DIR, f))
             except OSError:
                 pass
-    shutil.copyfile(truyen_paths.title_font(ENGINE), os.path.join(TITLE_DIR, "font.ttf"))  # relative font, no drive colon
+    shutil.copyfile(truyen_paths.title_font(), os.path.join(TITLE_DIR, "font.ttf"))  # relative font, no drive colon
 
     use_logo = (not args.no_logo) and os.path.isfile(LOGO)
     logo_idx = (3 + (1 if use_outro else 0)) if use_logo else None  # input index after audio inputs

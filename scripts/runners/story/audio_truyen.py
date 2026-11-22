@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-"""audio_truyen.py — MỘT lệnh: crawl chương truyện (tamhoan.com) -> đọc bằng OmniVoice giọng
-'Giọng tiên hiệp' (ASR-verify tiêu đề) -> [tuỳ chọn] dựng video (nền + nhạc + overlay tên
+"""audio_truyen.py — MỘT lệnh: crawl chương truyện (tamhoan.com) -> đọc bằng giọng clone
+`giong-tien-hiep` (ASR-verify tiêu đề) -> [tuỳ chọn] dựng video (nền + nhạc + overlay tên
 chương + logo + phụ đề chạy + outro + fade). Dùng bởi slash command /audio-truyen.
 
 Ví dụ:
@@ -16,25 +16,23 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-# Script da doi sang apps/truyen/ (2026-08-26). DU LIEU (venv, assets, truyen-out,
-# _vtitles, voices) VAN O GOC ENGINE - neo vao day, khong neo vao HERE.
-# Phân giải (Windows + macOS): truyen_paths.py — OMNIVOICE_DIR → VOICE_STATION/omnivoice.
+# Chỗ ghi theo CHIẾN DỊCH (env TRUYEN_CAMPAIGN_DIR do daily_truyen đặt): `<chiến dịch>/out|work|logs`;
+# nhạc ở trạm giọng, hình ở trạm video — xem truyen_paths.py. Không còn neo vào `<trạm>/omnivoice`.
 import truyen_paths  # noqa: E402
-ENGINE = truyen_paths.engine_dir()
-PY = truyen_paths.venv_python(ENGINE)
+PY = truyen_paths.venv_python()
 ENV = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", HF_HUB_OFFLINE="0")
 
 
 def default_out_dir():
-    """Nơi xuất mặc định: LOCAL, cạnh script này.
+    """Nơi xuất mặc định: LOCAL, `<chiến dịch>/out` (truyen_paths.layout).
 
     Trước đây hàm này dò Desktop (OneDrive\\Desktop rồi ~\\Desktop) và khi cả hai
     đều không có thì `return up` = thư mục home — tức ghi mp3/mp4 thẳng
     vào home root, vi phạm luật §C. Sau khi OneDrive đổi chủ (07/2026) cả hai ứng
     viên đều biến mất nên nhánh hỏng đó thành mặc định.
-    Giờ sản phẩm nằm local cạnh script; muốn chỗ khác thì truyền --out-dir.
+    Giờ sản phẩm nằm local trong chiến dịch; muốn chỗ khác thì truyền --out-dir.
     """
-    return os.path.join(ENGINE, "truyen-out", "out")
+    return truyen_paths.layout()["out"]
 
 
 def run(cmd, retries=0):
@@ -66,10 +64,10 @@ def main():
     ap.add_argument("--video", dest="video", action="store_true", default=True)
     ap.add_argument("--no-video", dest="video", action="store_false")
     ap.add_argument("--out-dir", dest="out_dir", default=None,
-                    help="Thư mục xuất (mặc định truyen-out/out cạnh script, KHÔNG phải Desktop).")
-    ap.add_argument("--voice", default="Giọng tiên hiệp", help="Profile giọng đọc (read_story).")
+                    help="Thư mục xuất (mặc định <chiến dịch>/out, KHÔNG phải Desktop).")
+    ap.add_argument("--voice", default=truyen_paths.DEFAULT_VOICE, help="Profile giọng đọc (read_story).")
     ap.add_argument("--bgm-file", dest="bgm_file", default=None,
-                    help="Ghi đè nhạc nền video (mặc định 'Nhạc nền tiên hiệp 1.mp3').")
+                    help="Ghi đè nhạc nền video (mặc định: nhạc kênh ở trạm giọng, channel.yml media.music.bgm).")
     # passthrough audio
     ap.add_argument("--speed", type=float, default=0.9)
     ap.add_argument("--gap-chapter", dest="gap_chapter", type=float, default=10.0)
@@ -93,7 +91,7 @@ def main():
     # lời kết đã được đọc bằng giọng clone qua --ending-text, ghép thêm outro cũ = LẶP câu chào.
     ap.add_argument("--no-outro", dest="no_outro", action="store_true", default=True)
     ap.add_argument("--with-outro", dest="no_outro", action="store_false",
-                    help="Ghép lại Outro PNTT.mp3 cũ sau lời kết (chỉ khi cố ý).")
+                    help="Ghép lại outro cũ của kênh sau lời kết (chỉ khi cố ý).")
     args = ap.parse_args()
 
     slug = args.slug
@@ -102,9 +100,9 @@ def main():
         if ms:
             slug = ms.group(1)
 
-    # Tag giọng để TÁCH HOÀN TOÀN version a-tun khỏi version "Giọng tiên hiệp"
+    # Tag giọng để TÁCH HOÀN TOÀN giọng khác khỏi giọng mặc định `giong-tien-hiep`
     # (tên file + thư mục cache wav riêng → không bao giờ dùng nhầm wav giọng khác).
-    is_default_voice = args.voice.strip().lower() in ("giọng tiên hiệp", "giong tien hiep")
+    is_default_voice = truyen_paths.is_default_voice(args.voice)
     vtag = "" if is_default_voice else "_" + re.sub(r"[^a-z0-9]+", "", args.voice.lower())
 
     if args.start is not None:
@@ -118,8 +116,8 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     voice = os.path.join(out_dir, label + ".mp3")
     video = os.path.join(out_dir, label + ".mp4")
-    # cache wav riêng cho mỗi giọng (mặc định: truyen-out/<slug>; a-tun: truyen-out/<slug>__atun)
-    read_out_dir = os.path.join(ENGINE, "truyen-out", slug + ("" if is_default_voice else vtag.replace("_", "__")))
+    # cache wav riêng cho mỗi giọng (mặc định: work/<slug>; giọng khác: work/<slug>__<giọng>)
+    read_out_dir = os.path.join(truyen_paths.layout()["scratch"], slug + ("" if is_default_voice else vtag.replace("_", "__")))
 
     # ---- BƯỚC 1: đọc truyện -> mp3 + manifest + srt ----
     rs = [PY, "-u", os.path.join(HERE, "read_story.py"), "--slug", slug,

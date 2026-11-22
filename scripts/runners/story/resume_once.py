@@ -8,7 +8,7 @@
 
 ## Vì sao (P1-23, Mac mini 02/10/2026)
 
-Lượt truyện 301–310 bị wrapper giết lúc 08:30 — mã 124, sau 9/10 chương: giọng `a-tun-v1` mất
+Lượt truyện 301–310 bị wrapper giết lúc 08:30 — mã 124, sau 9/10 chương: một giọng clone mất
 ~55 phút/chương nên 10 chương vượt trần 30600 s. Người phải `launchctl kickstart` tay; lượt chạy
 tiếp dùng cache chương + `_resume.json` và xong sau 1 h 26. chủ repo chốt: runner TỰ chạy tiếp.
 
@@ -58,14 +58,24 @@ import notify_run  # noqa: E402
 RESUME_MARK = "_resume.json"
 MA_QUA_GIO = notify_run.MA_QUA_GIO          # 124 — một hợp đồng mã thoát cho cả hai máy
 TRAN_DAU = 30600        # 8 h 30 — trần lượt đầu như trước (đo: lượt rảnh ~6 h 05 + crawl + dựng)
-TRAN_TIEP = 10800       # 3 h — lượt tiếp chỉ còn phần dở: 1 chương a-tun-v1 ~55′ + dựng ~40′ + đăng
+TRAN_TIEP = 10800       # 3 h — lượt tiếp chỉ còn phần dở: 1 chương giọng chậm ~55′ + dựng ~40′ + đăng
+
+
+def dau_tu_lenh(cmd: list[str]) -> str | None:
+    """`_resume.json` theo `--state <chiến dịch>/truyen-state.json` trong lệnh con (None nếu lệnh
+    không có `--state`): `<chiến dịch>/work/_resume.json` — cùng chỗ `daily_truyen.py` ghi dấu."""
+    for i, x in enumerate(cmd[:-1]):
+        if x == "--state":
+            return os.path.join(os.path.dirname(os.path.abspath(cmd[i + 1])), "work", RESUME_MARK)
+    return None
 
 
 def duong_dau(env=None) -> str | None:
-    """`<trạm giọng>/omnivoice/truyen-out/_resume.json`; None nếu chưa biết trạm giọng."""
+    """`<chiến dịch>/work/_resume.json` (chiến dịch = TRUYEN_CAMPAIGN_DIR / `--state` của lệnh con);
+    chưa có chiến dịch thì cây cũ `<trạm giọng>/omnivoice/truyen-out`; None nếu không biết chỗ nào."""
     try:
         import truyen_paths
-        return os.path.join(truyen_paths.engine_dir(env), "truyen-out", RESUME_MARK)
+        return os.path.join(truyen_paths.layout(None, env)["scratch"], RESUME_MARK)
     except SystemExit:            # truyen_paths báo "không biết trạm giọng" bằng SystemExit
         return None
 
@@ -179,7 +189,8 @@ def main(argv: list[str] | None = None) -> int:
                     help=f"trần lượt đầu, giây (mặc định {TRAN_DAU}; 0 = không trần)")
     ap.add_argument("--resume-budget", type=int, default=TRAN_TIEP,
                     help=f"trần lượt chạy tiếp, giây (mặc định {TRAN_TIEP})")
-    ap.add_argument("--mark", help="đường tới _resume.json (mặc định: trạm giọng)")
+    ap.add_argument("--mark", help="đường tới _resume.json (mặc định: `<chiến dịch>/work/_resume.json` "
+                                   "suy từ --state của lệnh con; không có thì env TRUYEN_CAMPAIGN_DIR)")
     if "--" in argv:
         i = argv.index("--")
         opts, cmd = argv[:i], argv[i + 1:]
@@ -191,7 +202,7 @@ def main(argv: list[str] | None = None) -> int:
     if a.budget < 0 or a.resume_budget < 1:
         ap.error("--budget phải ≥ 0 và --resume-budget phải ≥ 1")
     _bat_tin_hieu()
-    return chay(cmd, a.title, a.budget, a.resume_budget, a.mark or duong_dau())
+    return chay(cmd, a.title, a.budget, a.resume_budget, a.mark or dau_tu_lenh(cmd) or duong_dau())
 
 
 if __name__ == "__main__":

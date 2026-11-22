@@ -23,11 +23,9 @@ import subprocess
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-# Script da doi sang apps/truyen/ (2026-08-26). DU LIEU (venv, assets, truyen-out,
-# _vtitles, voices) VAN O GOC ENGINE - neo vao day, khong neo vao HERE.
+# Log chữa lỗi nằm trong `<chiến dịch>/logs` (TRUYEN_CAMPAIGN_DIR do daily_truyen đặt).
 import truyen_paths  # noqa: E402  — phân giải Windows + macOS
-ENGINE = truyen_paths.engine_dir()
-_LOGDIR = os.path.join(ENGINE, "truyen-out", "daily-logs")   # sweep GIỮ (tên thư mục có 'log')
+_LOGDIR = truyen_paths.layout()["logs"]   # <chiến dịch>/logs — ngoài vùng sweep
 HEAL_STATE = os.path.join(_LOGDIR, "_heal_state.json")
 HEAL_AUDIT = os.path.join(_LOGDIR, "_heal_audit.log")
 # Memory Claude của home: slug = đường thư mục nhà, mọi ký tự không phải chữ/số -> "-"

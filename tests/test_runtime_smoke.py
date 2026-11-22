@@ -100,7 +100,9 @@ def test_make_video_dung_duoc_video_CO_tieu_de_drawtext_VA_phu_de(tmp_path):
                                              "name": "Khói lửa nhân gian"}]},
                               ensure_ascii=False), encoding="utf-8")
     out = tmp_path / "ra.mp4"
-    env = {**os.environ, "OMNIVOICE_DIR": str(eng), "PYTHONUTF8": "1",
+    # Biến PROCESS thắng registry User: không để trạm thật của máy (VOICE_STATION/VIDEO_STATION) lọt vào sandbox.
+    env = {**os.environ, "OMNIVOICE_DIR": str(eng), "VOICE_STATION": str(tmp_path),
+           "VIDEO_STATION": str(tmp_path / "khong-co-tram-video"), "PYTHONUTF8": "1",
            "PYTHONIOENCODING": "utf-8"}
     # FFMPEG_DIR chỉ đặt khi ffmpeg đang dùng KHÔNG nằm trên PATH (vd keg-only trên Mac): như
     # thế make_video tự phân giải giống hệt doctor, không phụ thuộc biến test tự thêm.

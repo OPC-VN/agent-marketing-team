@@ -140,13 +140,14 @@ def _fake_engine():
 def _run_sweep(eng, out, keep=()):
     """Gọi sweep_old với ENGINE/OUT_DIR trỏ vào cây giả; trả về các dòng log."""
     lines = []
-    old_engine, old_out = daily_truyen.ENGINE, daily_truyen.OUT_DIR
-    daily_truyen.ENGINE = eng
+    old = (daily_truyen.OUT_ROOT, daily_truyen.OUT_DIR, daily_truyen.SWEEP_SIBLINGS)
+    daily_truyen.OUT_ROOT = out                          # gốc cache + dấu resume (cây cũ: truyen-out)
     daily_truyen.OUT_DIR = os.path.join(out, "out")
+    daily_truyen.SWEEP_SIBLINGS = (eng,)                 # cây cũ: `_vtitles` nằm cạnh truyen-out
     try:
         daily_truyen.sweep_old({"last_publish_ok": True}, lines.append, keep=keep)
     finally:
-        daily_truyen.ENGINE, daily_truyen.OUT_DIR = old_engine, old_out
+        daily_truyen.OUT_ROOT, daily_truyen.OUT_DIR, daily_truyen.SWEEP_SIBLINGS = old
     return lines
 
 
@@ -344,23 +345,28 @@ def tp6_no_windows_hardcode():
 
 
 def tr1_voice_by_range():
-    vd = tempfile.mkdtemp(prefix="truyen_voices_")
-    try:
-        for v in daily_truyen.VOICE_POOL:
-            _touch(vd, v + ".wav")
-        import datetime as _dt
-        a = daily_truyen.pick_voice(vd, today=_dt.date(2026, 9, 29), end=280, batch=10)
-        b = daily_truyen.pick_voice(vd, today=_dt.date(2026, 9, 30), end=280, batch=10)
-        check(a == b, "R-T1 chạy lại CÙNG dải hôm sau ra CÙNG giọng", f"({a} vs {b})")
-        check(a == "a-tun" and daily_truyen.pick_voice(vd, end=290, batch=10) == "a-tun-v1",
-              "R-T1 giữ đúng nhịp đã chạy (271-280 a-tun, 281-290 a-tun-v1)")
-        check(daily_truyen.pick_voice(vd, today=_dt.date(2026, 9, 29)) == "a-tun",
-              "R-T1 gọi trần (không dải) vẫn theo ngày như cũ")
-        os.remove(os.path.join(vd, "a-tun.wav"))
-        check(daily_truyen.pick_voice(vd, end=280, batch=10) == "a-tun-v1",
-              "R-T1 profile thiếu file thì bỏ qua")
-    finally:
-        shutil.rmtree(vd, ignore_errors=True)
+    """Giọng là CẤU HÌNH: pool đến từ ngoài (`--voice-pool`), mã không mang tên giọng nào."""
+    pool = ["giong-mot", "giong-hai"]
+    import datetime as _dt
+    a = daily_truyen.pick_voice(pool, today=_dt.date(2026, 9, 29), end=280, batch=10)
+    b = daily_truyen.pick_voice(pool, today=_dt.date(2026, 9, 30), end=280, batch=10)
+    check(a == b, "R-T1 chạy lại CÙNG dải hôm sau ra CÙNG giọng", f"({a} vs {b})")
+    check(a == "giong-mot" and daily_truyen.pick_voice(pool, end=290, batch=10) == "giong-hai",
+          "R-T1 giữ đúng nhịp (dải chẵn lẻ theo end // batch)")
+    check(daily_truyen.pick_voice(pool, today=_dt.date(2026, 9, 29)) == "giong-mot",
+          "R-T1 gọi trần (không dải) vẫn theo ngày như cũ")
+    check(daily_truyen.pick_voice(pool, available=["giong-hai"], end=280, batch=10) == "giong-hai",
+          "R-T1 profile không có thật (theo `profiles list`) thì bỏ qua")
+    check(daily_truyen.pick_voice(pool, available=[], end=280, batch=10, default="mac-dinh") == "mac-dinh",
+          "R-T1 không còn profile nào -> giọng mặc định của kênh")
+    check(daily_truyen.pick_voice([], end=280, batch=10, default="mac-dinh") == "mac-dinh",
+          "R-T1 pool rỗng -> giọng mặc định (không tên giọng nào viết cứng trong mã)")
+    import unicodedata as _ud
+    nfc = _ud.normalize("NFC", "giọng-á")
+    check(daily_truyen.pick_voice([nfc], available=[_ud.normalize("NFD", nfc)], end=1, default="x") == nfc,
+          "R-T1 so tên NFC (file NFD từ Windows sang macOS vẫn khớp)")
+    src = open(os.path.join(HERE, "daily_truyen.py"), encoding="utf-8").read()
+    check("a-tun" not in src, "R-T1 daily_truyen.py không còn tên giọng thật")
 
 
 def tr2_resume_keep_and_sweep():

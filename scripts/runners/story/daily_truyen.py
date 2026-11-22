@@ -1,13 +1,18 @@
 # -*- coding: utf-8 -*-
 """daily_truyen.py — chạy 1 lần/ngày: lấy N chương TIẾP THEO của Phàm Nhân Tu Tiên, dựng 1 video
-(giọng A-Tũn + nhạc nền tiên hiệp 2 + ngọn lửa ngang trên tiêu đề), lưu THẲNG vào
-"truyen-out\\out\\PNTT <đầu>-<cuối>.mp4" (LOCAL, cạnh script), ĐĂNG CÔNG KHAI lên kênh
+(giọng của chiến dịch + nhạc nền tiên hiệp 2 + ngọn lửa ngang trên tiêu đề), lưu THẲNG vào
+`<chiến dịch>/out/PNTT <đầu>-<cuối>.mp4`, ĐĂNG CÔNG KHAI lên kênh
 @nghe-tien-truyen (playlist "Phàm Nhân Tu Tiên (P1)") kèm mốc thời gian từng chương, rồi
 XOÁ mọi file phụ (mp3/json/srt/cache/scratch) — chỉ giữ lại đúng 1 video.
 
 Tiến độ theo truyen-state.json (last_end). Chỉ tăng tiến độ KHI DỰNG VIDEO XONG (publish là
-best-effort: thiếu token thì bỏ qua, video vẫn nằm ở truyen-out\\out để đăng tay sau).
-Dùng bởi Windows Task Scheduler (3h sáng).
+best-effort: thiếu token thì bỏ qua, video vẫn nằm ở `<chiến dịch>/out` để đăng tay sau).
+Dùng bởi Windows Task Scheduler / launchd (3h sáng).
+
+Chỗ ghi (DN3/DN11): `<chiến dịch>/out` (thành phẩm) · `<chiến dịch>/work` (cache + dấu resume) ·
+`<chiến dịch>/logs` (log). Chiến dịch = thư mục chứa `--state`; nó được đưa cho mọi tiến trình
+con qua env TRUYEN_CAMPAIGN_DIR. Giọng là CẤU HÌNH: `--voice-pool` / `--voice-default` (runner đọc
+`campaign.md: runtime.voice_pool|voice_profile` hoặc `channel.yml`); state `voice` vẫn ép được.
 """
 import argparse
 import datetime
@@ -18,67 +23,77 @@ import shutil
 import stat
 import subprocess
 import sys
+import unicodedata
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
-# Script da doi sang apps/truyen/ (2026-08-26). DU LIEU (venv, assets, truyen-out,
-# _vtitles, voices) VAN O GOC ENGINE - neo vao day, khong neo vao HERE.
-# Phân giải đường (Windows + macOS) gom ở truyen_paths.py: OMNIVOICE_DIR → VOICE_STATION/omnivoice.
+# Phân giải đường (Windows + macOS) gom ở truyen_paths.py. Pipeline KHÔNG còn neo vào
+# `<trạm giọng>/omnivoice`: chỗ ghi theo CHIẾN DỊCH (`use_campaign`), media theo
+# `truyen_paths.media_file` (nhạc ở trạm giọng, hình ở trạm video).
 import truyen_paths  # noqa: E402
-ENGINE = truyen_paths.engine_dir()
-PY = truyen_paths.venv_python(ENGINE)            # venv torch (đọc + dựng video)
+PY = truyen_paths.venv_python()                  # venv torch (đọc + dựng video)
 # Python cho bước publish (cần google-api-python-client): dò LÚC ĐĂNG bằng
 # truyen_paths.publish_python() — TRUYEN_PUBLISH_PY → python/python3/py trên PATH.
-# State MẶC ĐỊNH = state P1 ở gốc (giữ hành vi cũ cho ai gọi trần). Từ 14/08/2026 mỗi PHẦN
-# truyện có state riêng trong pham_nhan_tu_tien_phan_<n>\ và được truyền qua --state.
+# State: mỗi PHẦN truyện có state riêng `<chiến dịch>/truyen-state.json`, truyền qua --state.
 # Bản trong repo (`scripts/runners/story/`) KHÔNG có state cạnh script: state là DỮ LIỆU của
 # chiến dịch trong trạm, nên `--state` là bắt buộc (runner `run-daily-truyen.ps1` luôn truyền).
 DEFAULT_STATE = None
-LOGDIR = os.path.join(ENGINE, "truyen-out", "daily-logs")
-WORK = os.path.join(ENGINE, "truyen-out", "_work")
 ENV = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1", HF_HUB_OFFLINE="0")
 
-# TẤT CẢ để LOCAL trong trạm giọng — không ghi/đọc gì trên thư mục đồng bộ đám mây.
-# 07/2026: đổi tài khoản đồng bộ làm cây thư mục làm việc đổi đường; mọi path hardcode cũ
-# chết cùng lúc.
-# Thêm nữa: mỗi video ~1,5-2 GB × 3 lần/ngày sync lên cloud hoàn toàn vô ích vì xoá ngay
-# sau khi đăng YouTube xong.
-ASSETS = os.path.join(ENGINE, "assets")
-OUT_DIR = os.path.join(ENGINE, "truyen-out", "out")
-BGM2 = os.path.join(ASSETS, "Nhạc nền tiên hiệp 2.mp3")
-VOICE = "a-tun"          # giọng cũ — giữ làm phao cứu sinh, xem pick_voice()
-
-# Luân phiên HAI giọng — chủ repo quyết 31/08/2026 sau khi nghe A/B.
-# Pool cũ ["a-tun-v1","a-tun-v2","a-tun-v3"] đã bỏ: clone chép cả NHỊP NÓI của clip mẫu
-# nên luân phiên = đổi tốc độ đọc theo ngày. Tốc độ đo trên cùng một đoạn (speed 0.9):
-#     a-tun 2.53  ·  a-tun-v1 2.55 (+0.8%)  ·  a-tun-v3 2.89 (+14%)
-# a-tun và a-tun-v1 lệch nhau 0.8% — tai gần như không phân biệt được về nhịp, nên
-# luân phiên giữa hai giọng này AN TOÀN, vẫn có chút đổi màu giọng giữa các tập.
-# v2/v3 KHÔNG quay lại vòng: v3 nhanh hơn 14% và từng làm giọng "nhanh, ngang cứng".
-# Âm lượng đã chuẩn ở tầng engine (mcp_server.normalize_rms) nên đổi giọng không đổi độ to.
-# `a-tun-truyen-ma` vẫn ngoài vòng — khác thể loại.
-VOICE_POOL = ["a-tun", "a-tun-v1"]
+# Chỗ ghi — đặt bởi use_campaign() ở đầu main() (rỗng cho tới lúc đó):
+#   OUT_DIR    thành phẩm            <chiến dịch>/out
+#   OUT_ROOT   cache chương + dấu resume, sweep_old dọn nó   <chiến dịch>/work
+#   WORK       thư mục dựng của lượt này                      <chiến dịch>/work/_work
+#   LOGDIR     log lượt chạy         <chiến dịch>/logs
+# Tất cả LOCAL — không ghi/đọc gì trên thư mục đồng bộ đám mây (07/2026: đổi tài khoản đồng bộ
+# làm cây thư mục làm việc đổi đường; và mỗi video ~1,5-2 GB × 3 lần/ngày sync lên cloud vô ích).
+OUT_DIR = OUT_ROOT = WORK = LOGDIR = ""
+SWEEP_SIBLINGS = ()      # chỉ cây cũ: thư mục cha chứa `_vtitles`/`_firetest*` cần dọn
+BGM2 = ""              # nhạc nền của lượt daily: media_file("music", "bgm_daily", ...)
+CAMPAIGN = ""
+# Giọng là CẤU HÌNH (DN10), không có tên giọng nào viết trong mã. Dự phòng cuối cùng khi không ai
+# khai gì: profile mặc định của kênh (`truyen_paths.DEFAULT_VOICE`).
+VOICE = truyen_paths.DEFAULT_VOICE
 
 
-def pick_voice(voices_dir=None, today=None, end=None, batch=10):
-    """Chọn giọng luân phiên trong VOICE_POOL.
+def use_campaign(state_path=None):
+    """Đặt các đường ghi theo chiến dịch (thư mục chứa `state_path`) và đưa nó cho tiến trình con
+    (TRUYEN_CAMPAIGN_DIR). Không `state_path` ⇒ `truyen_paths.layout()` tự chọn (có cảnh báo)."""
+    global OUT_DIR, OUT_ROOT, WORK, LOGDIR, BGM2, CAMPAIGN, SWEEP_SIBLINGS
+    camp = os.path.dirname(os.path.abspath(state_path)) if state_path else None
+    lay = truyen_paths.layout(camp)
+    CAMPAIGN = lay["campaign"]
+    OUT_DIR, OUT_ROOT, WORK, LOGDIR = lay["out"], lay["scratch"], lay["work"], lay["logs"]
+    SWEEP_SIBLINGS = (os.path.dirname(OUT_ROOT),) if lay["mode"] == "legacy" else ()
+    if CAMPAIGN:
+        ENV["TRUYEN_CAMPAIGN_DIR"] = CAMPAIGN
+        os.environ["TRUYEN_CAMPAIGN_DIR"] = CAMPAIGN
+    BGM2 = truyen_paths.media_file("music", "bgm_daily", "Nhạc nền tiên hiệp 2.mp3", campaign=CAMPAIGN or None)
+    return lay
+
+
+def pick_voice(pool=None, available=None, today=None, end=None, batch=10, default=None):
+    """Chọn giọng luân phiên trong `pool` (CẤU HÌNH: `--voice-pool` / `state.voice_pool`).
 
     Có `end` (chương cuối YÊU CẦU của dải) ⇒ chọn theo DẢI CHƯƠNG: `(end // batch) % n`.
     Chạy lại cùng dải (lượt trước bị giết / build lỗi) ra ĐÚNG giọng cũ ⇒ cùng thư mục cache
-    `truyen-out/<slug>__<giọng>` ⇒ resume được chương đã đọc (F1-ANALYSIS §7.4). Theo ngày thì
-    hôm sau đổi giọng, cache hôm trước vô dụng. Mốc `end // batch` giữ đúng nhịp đã chạy:
-    dải 271-280 (29/09) = a-tun, 281-290 = a-tun-v1, …
+    `work/<slug>__<giọng>` ⇒ resume được chương đã đọc (F1-ANALYSIS §7.4). Theo ngày thì
+    hôm sau đổi giọng, cache hôm trước vô dụng.
 
     Không có `end` ⇒ hành vi cũ theo ngày trong năm (giữ cho ai gọi trần).
 
-    Profile nào thiếu file thì BỎ QUA thay vì làm gãy cả lượt chạy đêm — và nếu không còn
-    profile nào thì rơi về giọng cũ `a-tun`.
+    `available` = tên profile CÓ THẬT (qua `voice-studio profiles list --json`; None = không hỏi
+    được thì tin pool). Tên thiếu thì BỎ QUA thay vì làm gãy cả lượt chạy đêm; không còn tên nào
+    (hoặc pool rỗng) ⇒ `default` (profile mặc định của kênh). KHÔNG đọc thư mục kho giọng.
     """
     import datetime
-    voices_dir = voices_dir or os.path.join(ENGINE, "voices")
-    have = [v for v in VOICE_POOL if os.path.isfile(os.path.join(voices_dir, v + ".wav"))]
+    default = default or VOICE
+    nfc = lambda s: unicodedata.normalize("NFC", str(s))  # noqa: E731
+    pool = [str(v).strip() for v in (pool or []) if str(v).strip()]
+    ok = None if available is None else {nfc(a) for a in available}
+    have = [v for v in pool if ok is None or nfc(v) in ok]
     if not have:
-        return VOICE
+        return default
     if end is not None:
         return have[(int(end) // max(1, int(batch))) % len(have)]
     doy = (today or datetime.date.today()).timetuple().tm_yday
@@ -124,7 +139,7 @@ def xac_nhan_da_dang(st, mark, stamp):
     """
     if "act_end" not in mark:
         raise ValueError("dấu không mang act_end (lượt ghi dấu cũ hơn 1.1.8) — sửa state tay theo "
-                         "manifest trong truyen-out/_work")
+                         "manifest trong <chiến dịch>/work/_work")
     st = dict(st)
     st["last_end"] = int(mark["act_end"])
     st["last_run"] = stamp
@@ -137,7 +152,7 @@ def xac_nhan_da_dang(st, mark, stamp):
 
 
 def resume_keep(mark, slug, start, end, voice):
-    """-> tập tên trong truyen-out được chừa khi sweep (rỗng nếu dấu không khớp lượt này)."""
+    """-> tập tên trong <chiến dịch>/work được chừa khi sweep (rỗng nếu dấu không khớp lượt này)."""
     want = {"slug": slug, "start": int(start), "end": int(end), "voice": voice}
     if not isinstance(mark, dict) or any(mark.get(k) != v for k, v in want.items()):
         return set()
@@ -190,6 +205,8 @@ def xoay_log_truyen(log):
     lượt này) không đụng; `_heal_state.json` / `_heal_audit.log` (tên bắt đầu `_`) không đụng.
     Mã ở `scripts/lib/log_rotate.py` (dùng chung với runner tin). Hỏng gì cũng chỉ ghi log.
     """
+    if not LOGDIR:       # chưa `use_campaign()`: không có chỗ nào để xoay (và KHÔNG xoay thư mục hiện hành)
+        return
     try:
         lib = os.path.join(os.path.dirname(os.path.dirname(HERE)), "lib")
         if lib not in sys.path:
@@ -228,8 +245,8 @@ def sweep_old(st, log, keep=()):
 
     failed = []                              # (đường dẫn, lỗi) — báo to ở cuối, xem ghi chú dưới
 
-    out = os.path.join(ENGINE, "truyen-out")
-    for name in sorted(os.listdir(out)):
+    out = OUT_ROOT
+    for name in (sorted(os.listdir(out)) if os.path.isdir(out) else []):
         if "log" in name.lower():          # daily-logs/, atun-logs/, *.log -> GIỮ
             continue
         if name in keep:                   # cache chương của dải đang dở (resume) -> GIỮ
@@ -243,15 +260,19 @@ def sweep_old(st, log, keep=()):
             failed.append((p, e))
             log(f"[sweep] bỏ qua {p}: {e}")
 
-    for name in os.listdir(ENGINE):          # _vtitles, scratch _firetest*, _clonetmp*
-        if name == "_vtitles" or name.startswith(("_firetest", "_clonetmp")):
-            p = os.path.join(ENGINE, name)
-            try:
-                rm_path(p)
-                log(f"[sweep] xoá {p}")
-            except OSError as e:
-                failed.append((p, e))
-                log(f"[sweep] bỏ qua {p}: {e}")
+    # Cây cũ (chạy tay, trạm chưa dời): `_vtitles` + scratch `_firetest*`/`_clonetmp*` nằm cạnh
+    # truyen-out trong engine cũ. Chế độ chiến dịch KHÔNG có chúng: nháp tiêu đề ở
+    # `<trạm video>/scratch/story-titles` (make_video tự dọn).
+    for parent in SWEEP_SIBLINGS:
+        for name in (os.listdir(parent) if os.path.isdir(parent) else []):
+            if name == "_vtitles" or name.startswith(("_firetest", "_clonetmp")):
+                p = os.path.join(parent, name)
+                try:
+                    rm_path(p)
+                    log(f"[sweep] xoá {p}")
+                except OSError as e:
+                    failed.append((p, e))
+                    log(f"[sweep] bỏ qua {p}: {e}")
 
     # Video lần trước trong OUT_DIR (local) — mỗi cái ~1,5-2 GB, giữ tới lần chạy sau rồi xoá.
     if os.path.isdir(OUT_DIR):
@@ -306,8 +327,15 @@ def main():
     g.add_argument("--clear-publish-guard", action="store_true",
                    help="gỡ chặn khi kênh CHƯA có tập: bỏ pha publish khỏi dấu, lượt sau dựng + "
                         "đăng lại dải đó")
+    ap.add_argument("--voice-pool", default="",
+                    help="Giọng luân phiên theo dải chương, cách nhau dấu phẩy (CẤU HÌNH chiến dịch: "
+                         "campaign.md runtime.voice_pool). State `voice_pool`/`voice` ưu tiên hơn.")
+    ap.add_argument("--voice-default", default="",
+                    help="Giọng dùng khi không có pool (CẤU HÌNH: runtime.voice_profile / "
+                         "channel.yml voice_profile). Không khai ⇒ giọng mặc định của kênh.")
     args = ap.parse_args()
     STATE = args.state
+    use_campaign(STATE)
 
     if not os.path.isfile(STATE):
         sys.exit(f"Thiếu state file: {STATE}")
@@ -327,14 +355,19 @@ def main():
         start, end = 0, batch
     # State ghi đè vẫn thắng (ép giọng cho một chương cụ thể); không ghi đè thì luân phiên
     # THEO DẢI CHƯƠNG (chạy lại cùng dải = cùng giọng = dùng lại cache — xem pick_voice).
-    voice = st.get("voice") or pick_voice(end=end, batch=batch)
+    # Thứ tự: state `voice` (ép) > pool (state `voice_pool` / --voice-pool) > --voice-default >
+    # profile mặc định của kênh. Không có tên giọng nào viết trong mã (DN10).
+    pool = st.get("voice_pool") or [x for x in args.voice_pool.split(",") if x.strip()]
+    voice = st.get("voice") or pick_voice(
+        pool=pool, available=truyen_paths.available_profiles() if pool else None,
+        end=end, batch=batch, default=args.voice_default.strip() or None)
 
     # Hậu tố tên file theo GIỌNG — phải khớp TỪNG KÝ TỰ với audio_truyen.py:106,
     # vì file do bên đó đặt tên còn bên này đi tìm. Trước 2026-08-26 chỗ này hardcode
-    # "_atun"; khi giọng thành a-tun-v1/v2/v3 thì audio_truyen ghi ra "..._atunv3_..."
+    # "_atun"; khi đổi sang giọng khác thì audio_truyen ghi ra "..._<giọng>_..."
     # còn daily_truyen tìm "..._atun_..." -> build xong vài giờ GPU rồi mới chết, và
     # chết ở NGOÀI run_build() nên heal_agent không bao giờ được gọi.
-    _is_default_voice = voice.strip().lower() in ("giọng tiên hiệp", "giong tien hiep")
+    _is_default_voice = truyen_paths.is_default_voice(voice)
     vtag = "" if _is_default_voice else "_" + re.sub(r"[^a-z0-9]+", "", voice.lower())
     playlist = st.get("playlist", "Phàm Nhân Tu Tiên (P1)")
     title_prefix = st.get("title_prefix", "PNTT")
@@ -351,8 +384,7 @@ def main():
         f"+ lửa + nhạc tiên hiệp 2 | playlist {playlist}")
 
     # ---- 0) dọn sản phẩm lần chạy TRƯỚC (giữ log) — phải TRƯỚC khi tạo _work của run này ----
-    out_root = os.path.join(ENGINE, "truyen-out")
-    mark_path = os.path.join(out_root, RESUME_MARK)
+    mark_path = os.path.join(OUT_ROOT, RESUME_MARK)
     try:
         _mark = json.load(open(mark_path, encoding="utf-8"))
     except (OSError, ValueError):
@@ -408,7 +440,7 @@ def main():
     except OSError as e:
         log(f"[daily] WARN: không ghi được dấu resume ({e}).")
 
-    # ---- 1) crawl + đọc (A-Tũn) + dựng video (lửa mới) vào WORK ----
+    # ---- 1) crawl + đọc (giọng cấu hình) + dựng video (lửa mới) vào WORK ----
     cmd = [PY, "-u", os.path.join(HERE, "audio_truyen.py"),
            "--slug", slug, "--start", str(start), "--end", str(end), "--video",
            "--voice", voice, "--bgm-file", BGM2, "--out-dir", WORK,
@@ -509,7 +541,7 @@ def main():
         sys.exit(1)
     pub_ok = False
     if os.path.isfile(TOKEN_TRUYEN) and os.path.isfile(manifest):
-        cache_dir = os.path.join(ENGINE, "truyen-out", slug + vtag.replace("_", "__"), "cache")
+        cache_dir = os.path.join(OUT_ROOT, slug + vtag.replace("_", "__"), "cache")
         pub_py = truyen_paths.publish_python()
         log(f"[daily] publish bằng {' '.join(pub_py)}")
         pub = subprocess.run(pub_py + [os.path.join(HERE, "truyen_publish.py"),

@@ -23,9 +23,8 @@ import re
 import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
-# Da doi sang apps/truyen/ (2026-08-26); du lieu van o goc engine.
+# Cache chương theo chiến dịch (`<chiến dịch>/work`) — xem truyen_paths.layout().
 import truyen_paths  # noqa: E402  — phân giải Windows + macOS
-ENGINE = truyen_paths.engine_dir()
 # Nơi chứa youtube_upload.py dùng chung: `scripts/runners` của repo → <trạm>/engine (bản cũ)
 # (chỉ nhận thư mục CÓ youtube_upload.py). Tên biến giữ AINEWS cho code dưới.
 AINEWS = truyen_paths.upload_engine_dir()
@@ -152,7 +151,7 @@ def _claude_cli_json(prompt, timeout=180):
 def _find_cache(base, first_num):
     """Tìm thư mục cache chứa Chuong_<first>.txt (đoạn mở đầu giúp tóm tắt sâu hơn). None nếu không có."""
     import glob
-    for c in glob.glob(os.path.join(base, "truyen-out", "*", "cache")):
+    for c in glob.glob(os.path.join(base, "*", "cache")):
         if os.path.isfile(os.path.join(c, f"Chuong_{first_num}.txt")):
             return c
     return None
@@ -160,7 +159,7 @@ def _find_cache(base, first_num):
 
 def gen_hook(chapters, cache_dir=None):
     """Sinh {title_hook, summary, closing} từ tên chương (+ đoạn mở đầu nếu có cache). None nếu lỗi."""
-    base = ENGINE   # truyen-out o goc engine, khong canh script (doi 2026-08-26)
+    base = truyen_paths.layout()["scratch"]   # <chiến dịch>/work (cache chương theo giọng)
     first, last = chapters[0]["num"], chapters[-1]["num"]
     cdir = cache_dir if (cache_dir and os.path.isdir(cache_dir)) else _find_cache(base, first)
     ctx = []
