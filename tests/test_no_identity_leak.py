@@ -413,26 +413,20 @@ MIEN_TRU = {
     (".github/CODEOWNERS", "handle"): 8,
     # Trang giới thiệu repo (GitHub Pages của chính chủ) + ảnh og của nó.
     ("docs/index.html", "ten-mien"): 8,
-    ("docs/index.html", "handle"): 8,
+    ("docs/index.html", "handle"): 1,
     ("docs/index.html", "ten-nguoi"): 1,
     ("docs/og-image.svg", "ten-mien"): 1,
     # Ghi công tác giả + URL repo trong manifest phát hành: host (Claude, Codex) hiển thị
     # đúng hai trường này khi người dùng xem plugin — đúng chức năng, như LICENSE.
     (".claude-plugin/plugin.json", "ten-nguoi"): 1,
-    (".claude-plugin/plugin.json", "handle"): 2,
     (".claude-plugin/marketplace.json", "ten-nguoi"): 1,
     (".codex-plugin/plugin.json", "ten-nguoi"): 1,
-    (".codex-plugin/plugin.json", "handle"): 2,
-    ("pyproject.toml", "handle"): 1,
     # URL repo công khai — nguồn DUY NHẤT mà hướng dẫn cài bảo agent tin (clone, kiểm
     # `git remote -v`, đọc INSTALL.md thô). Bỏ nó đi là bỏ luôn phép kiểm nguồn.
-    ("INSTALL.md", "handle"): 8,
-    ("README.md", "handle"): 4,         # +2: GitHub trong mục Tác giả
+    ("README.md", "handle"): 2,         # +2: GitHub trong mục Tác giả
     # Bản chép ĐÚNG prompt của INSTALL.md (cổng test_install_docs giữ nguyên văn):
     # START-HERE = prompt VI (2 URL); trang /install/ = 2 prompt × 2 URL + link INSTALL,
     # START-HERE, troubleshooting trên GitHub.
-    ("START-HERE.md", "handle"): 2,
-    ("docs/install/index.html", "handle"): 7,
     # Dòng Copyright của repo trong NOTICE — cùng chức năng với LICENSE.
     ("NOTICE", "ten-nguoi"): 2,         # +1: dòng Author
     # Tên đầy đủ, website, GitHub của tác giả: chủ dự án chủ động công khai (18/10) ở khối
