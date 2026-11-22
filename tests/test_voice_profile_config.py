@@ -127,6 +127,17 @@ def test_runner_tin_co_che_do_chay_kho_ResolveOnly():
         assert "Resolve-VoiceProfile" in (RUNNERS / f).read_text(encoding="utf-8-sig"), f
 
 
+def test_runner_truyen_thieu_Config_tu_sinh_tu_campaign_md_hoac_dung():
+    """Khong bao gio am tham roi ve giong mac dinh kenh khi campaign co voice_pool (review Opus/Fable PS1)."""
+    t = (RUNNERS / "run-daily-truyen.ps1").read_text(encoding="utf-8-sig")
+    i_tu_sinh = t.index("campaign_cfg.py")
+    i_doc_cfg = t.index("$cfg = $null")
+    assert i_tu_sinh < i_doc_cfg, "tu sinh -Config phai TRUOC khi doc voice_pool"
+    khoi = t[i_tu_sinh - 400:i_doc_cfg]
+    assert khoi.count("exit 2") >= 2, "khong sinh duoc cau hinh -> exit != 0, khong chay tiep"
+    assert "--campaign $Campaign" in khoi
+
+
 # ── 4. voice.list_profiles / inventory ───────────────────────────────────────────────────
 
 def test_list_profiles_doc_dong_json_cuoi(monkeypatch):

@@ -17,6 +17,11 @@ Mỗi mục là một phiên bản. Mục đầu luôn là số trong `pyproject
   (`channel.yml: media`), nháp ffmpeg ở `<trạm video>/scratch/story-titles`; trạm chưa dời ⇒ lùi cây cũ + cảnh báo.
   `daily_truyen.py`: không còn tên giọng trong mã (`--voice-pool`/`--voice-default` từ cấu hình); giọng mặc định đổi
   `Giọng tiên hiệp` → `giong-tien-hiep`. `Get-BgmDir` ưu tiên `station.json: bgm_dir` của trạm giọng.
+  Vòng sửa sau review (22/11): `run-daily-truyen.ps1` thiếu `-Config` thì tự gọi `campaign_cfg.py` (không bao giờ rơi
+  âm thầm về giọng mặc định kênh khi campaign có `voice_pool`; không sinh được thì exit 2); P1/P2 có `run.ps1` như chiến dịch
+  tin, `run-daily-truyen-p2.ps1` / `run-phan-1.ps1` thành shim gọi `run.ps1`; nhạc nền chỉ còn nguồn `music/library` của trạm
+  giọng (`runner_deps.thu_muc_nhac_nen` cùng thứ tự `Get-BgmDir`, trạm video chỉ để tương thích); `run-weekly-news.ps1
+  -ResolveOnly` in `out` theo `campaign.md: out_dir`; bỏ tên người trong skill `repo-today`.
   Việc mở: `run-weekly-news.ps1` còn gọi module nội bộ video-studio; `story/make_video.py` chờ chuyển sang video-studio.
 
 - Dời `CLAUDE.md` ở gốc sang `.claude/CLAUDE.md` chứa dòng `@../AGENTS.md`: `claude plugin validate --strict` đỏ khi

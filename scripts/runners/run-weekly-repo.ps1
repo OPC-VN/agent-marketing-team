@@ -58,7 +58,7 @@ $outRoot  = if ($cfg.out_root) { [string]$cfg.out_root } else { Join-Path $brand
 $prompt0  = if ($cfg.prompt_path) { [string]$cfg.prompt_path } else { Join-Path $brandDir 'repo-weekly-prompt.txt' }
 $covered  = Join-Path $brandDir 'covered-repos.json'
 $logdir   = if ($cfg.log_dir) { [string]$cfg.log_dir } else { Join-Path $brandDir 'logs' }
-# VOICE_BGM_DIR -> <trạm video>/assets/news-bgm. Runner truyền TÊN style trong spec và đặt
+# VOICE_BGM_DIR -> `station.json: bgm_dir` của TRẠM GIỌNG (`music/library`); lùi về <trạm video>/assets/news-bgm chỉ để tương thích (có WARN). Runner truyền TÊN style trong spec và đặt
 # VOICE_BGM_DIR cho engine. AI chỉ được chọn style CÓ mp3 (Get-BgmCatalog).
 $bgmDir   = Get-BgmDir
 $bgmCat   = Get-BgmCatalog $bgmDir

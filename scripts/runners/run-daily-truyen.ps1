@@ -113,6 +113,31 @@ else {
   if ($cli -and -not $env:YT_CLIENT_SECRET -and (Test-IsPathValue $cli)) { $env:YT_CLIENT_SECRET = (Resolve-Home $cli) }
 }
 
+# Thieu -Config thi TU SINH tu campaign.md (campaign_cfg.py) — khong bao gio chay am tham voi
+# giong mac dinh cua kenh khi campaign khai runtime.voice_pool / voice_profile (task cu, chay tay
+# -Campaign tran). Khong sinh duoc cau hinh -> DUNG (exit 2), khong chay tiep voi cau hinh thieu.
+if (-not $Config -or -not (Test-Path -LiteralPath $Config)) {
+  $cfgpy = Join-Path (Join-Path (Split-Path $engine -Parent) 'pipeline') 'campaign_cfg.py'
+  if (-not (Test-Path -LiteralPath $cfgpy)) {
+    Write-Output ('[truyen] LOI: thieu -Config va khong thay ' + $cfgpy + ' de tu sinh tu campaign.md -> DUNG.')
+    exit 2
+  }
+  $cfgPython = Find-Python -Repo $script:RepoRoot
+  if (-not $cfgPython) {
+    Write-Output '[truyen] LOI: thieu -Config va khong tim thay Python 3.10+ de tu sinh tu campaign.md -> DUNG.'
+    exit 2
+  }
+  $cfgLogs = Join-Path $Campaign 'logs'
+  New-Item -ItemType Directory -Force -Path $cfgLogs | Out-Null
+  $Config = Join-Path $cfgLogs ('config-' + (Get-Date -Format 'yyyy-MM-dd') + '.json')
+  & $cfgPython $cfgpy --campaign $Campaign --out $Config
+  if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $Config)) {
+    Write-Output '[truyen] LOI: campaign_cfg.py that bai (thieu -Config, khong tu sinh duoc) -> DUNG. Khong chay tiep voi cau hinh thieu.'
+    exit 2
+  }
+  Write-Output ('[truyen] -Config tu sinh tu campaign.md: ' + $Config)
+}
+
 # Giong doc: cau hinh, khong phai ma. Ban chup -Config (campaign_cfg.py) mang voice_profile + voice_pool.
 $cfg = $null
 if ($Config -and (Test-Path -LiteralPath $Config)) { try { $cfg = Get-Content -LiteralPath $Config -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $cfg = $null } }

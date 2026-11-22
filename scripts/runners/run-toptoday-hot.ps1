@@ -65,7 +65,7 @@ $outRoot = if ($cfg.out_root) { [string]$cfg.out_root } else { Join-Path $brandD
 # và bản tin tuần) viết khác hẳn nhau, nên prompt không phải tài sản của kênh.
 $prompt0 = if ($cfg.prompt_path) { [string]$cfg.prompt_path } else { Join-Path $brandDir 'toptoday-prompt.txt' }
 # Thư viện nhạc nền (AI chọn theo nội dung). Manifest = nguồn chân lý.
-# VOICE_BGM_DIR -> <trạm video>/assets/news-bgm. Runner truyền TÊN style trong spec và đặt
+# VOICE_BGM_DIR -> `station.json: bgm_dir` của TRẠM GIỌNG (`music/library`); lùi về <trạm video>/assets/news-bgm chỉ để tương thích (có WARN). Runner truyền TÊN style trong spec và đặt
 # VOICE_BGM_DIR cho engine. AI chỉ được chọn style CÓ mp3 (Get-BgmCatalog).
 $bgmDir  = Get-BgmDir
 $bgmCat  = Get-BgmCatalog $bgmDir

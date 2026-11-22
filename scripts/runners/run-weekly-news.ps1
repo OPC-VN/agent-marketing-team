@@ -56,7 +56,7 @@ if (-not $syspy) { throw 'khong thay Python 3.10+ (dat MARKETING_STUDIO_PY).' }
 # test_khong_tham_chieu_engine_cu đi cấm.
 $media = @('-m', (@('video_studio', 'templates', 'news', 'daily_news_media') -join '.'))
 # Thư viện nhạc nền (AI chọn theo nội dung). Manifest = nguồn chân lý.
-# VOICE_BGM_DIR -> <trạm video>/assets/news-bgm. AI chỉ được chọn style CÓ mp3 (Get-BgmCatalog).
+# VOICE_BGM_DIR -> `station.json: bgm_dir` của TRẠM GIỌNG (`music/library`); lùi về <trạm video>/assets/news-bgm chỉ để tương thích (có WARN). AI chỉ được chọn style CÓ mp3 (Get-BgmCatalog).
 $bgmDir  = Get-BgmDir
 $bgmCat  = Get-BgmCatalog $bgmDir
 $bgmLib  = $bgmCat.lib
@@ -106,7 +106,9 @@ $voice = Resolve-VoiceProfile -Explicit $Profile -Cfg $cfg
 Log ('Voice: ' + $(if ($voice.name) { $voice.name } else { '(mac dinh cua tram giong)' }) + '  (' + $voice.source + ')')
 # -ResolveOnly: chi phan giai giong + duong, in ra roi THOAT (khong nghien cuu, khong TTS, khong dang).
 if ($ResolveOnly) {
-  Log ('ResolveOnly: out=' + $logdir + '  log=' + $logdir + '  bgm_dir=' + $bgmDir)
+  # out = campaign.md runtime.out_dir (campaign_cfg.py ghep thanh out_root); khong co -Config thi khong co out rieng.
+  $outShow = if ($cfg.out_root) { [string]$cfg.out_root } else { '(khong khai out_dir)' }
+  Log ('ResolveOnly: out=' + $outShow + '  log=' + $logdir + '  bgm_dir=' + $bgmDir)
   Log '=== resolve-only (khong chay) ==='; exit 0
 }
 # Rào render (P1-24): phép thử HyperFrames rẻ TRƯỚC nghiên cứu/TTS — kẹt thì dừng ngay (mã 5),

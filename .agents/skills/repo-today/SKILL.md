@@ -38,5 +38,5 @@ Tạo video **deep-dive** cho repo GitHub trending hôm nay, theo News v2 (nền
 
 ## Lưu ý
 - Phân tích phải TRUNG THỰC với README; phần vibe-coder/agent là ứng dụng hợp lý, nói rõ "có thể".
-- Không lộ tên tool nội bộ ở nội dung công khai (xem memory feedback_ainews_no_tool_names): giọng = Duc Nguyen.
+- Không lộ tên tool nội bộ ở nội dung công khai (xem memory feedback_ainews_no_tool_names): giọng = giọng mặc định của trạm (không truyền `--profile`).
 - Chi tiết kỹ thuật: `NEWS_V2_DESIGN.md` ở `agent-video-studio/docs/`; component/layout trong module `news_v2` của họ template bản tin (package `video_studio`).

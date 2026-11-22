@@ -266,13 +266,25 @@ def thieu_module(py: str, modules=MODULES) -> list[str] | None:
 
 
 def thu_muc_nhac_nen() -> Path | None:
-    """VOICE_BGM_DIR (env → `<repo>/.env`) → `<trạm video>/assets/news-bgm` — cùng thứ tự runner."""
+    """Cùng thứ tự `Get-BgmDir` của runner: VOICE_BGM_DIR (env → `<repo>/.env`) → `station.json: bgm_dir`
+    của trạm giọng (mặc định `music/library`; ÂM THANH ở trạm giọng) → (lùi, chỉ để tương thích)
+    `<trạm video>/assets/news-bgm` — cây cũ, runner có cảnh báo khi dùng nó."""
     v = (SP.secret_env("VOICE_BGM_DIR") or "").strip()
     if v:
         return Path(v).expanduser()
+    giong = SP.voice_station()
+    if giong:
+        rel = "music/library"
+        try:
+            sj = json.loads((giong / "station.json").read_text(encoding="utf-8-sig"))
+            rel = str(sj.get("bgm_dir") or rel)
+        except (OSError, ValueError, AttributeError):
+            pass
+        for cand in (Path(rel) if Path(rel).is_absolute() else giong / rel, giong / "music" / "library"):
+            if cand.is_dir():
+                return cand
     video = SP.video_station()
     return (video / "assets" / "news-bgm") if video else None
-
 
 def kiem_nhac_nen(d: Path | None) -> dict:
     """-> {dir, co_thu_vien, styles, thieu_mp3}. Chỉ đọc."""
