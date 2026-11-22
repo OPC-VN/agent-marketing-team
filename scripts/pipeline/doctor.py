@@ -492,30 +492,31 @@ def _kham_mot_tram(so: So, ten: str, goc, can: bool, ly_do: str, repo: str,
 
 
 def _kham_profile(so: So, goc_giong: Path, khai_kenh):
-    """Profile khai trong `channel.yml` phải có thật trong kho giọng."""
-    try:
-        kho = VOICE.voices_dir(goc_giong)
-    except SC.StudioError as e:
-        so.nhac(f"không xác định được kho giọng: {e}")
+    """Profile khai trong `channel.yml` phải có thật — hỏi TRẠM GIỌNG (`voice-studio profiles list
+    --json`), không đọc thư mục kho (bố cục kho là việc của trạm giọng).
+
+    Lệnh chưa có (bản voice-studio cũ) ⇒ `voice.inventory` lùi đọc kho kiểu phẳng cũ và nói ra một
+    dòng thông tin ở đây. So tên ở dạng NFC CẢ HAI vế (P1-4): file nhập từ Windows sang macOS mang
+    tên tiếng Việt dạng NFD, còn `channel.yml` viết NFC — so chuỗi thô thì doctor đỏ GIẢ trong khi
+    engine giọng vẫn mở được profile.
+    """
+    co, nguon, kho = VOICE.inventory(goc_giong)
+    if co is None:
+        if kho is not None:
+            so.nhac(f"giọng: chưa dùng được — kho giọng {kho} chưa có. Tạo profile bằng "
+                    f"`voice-studio make-profile`.")
+        else:
+            so.nhac("giọng: không hỏi được danh sách profile của trạm giọng "
+                    "(`voice-studio profiles list --json`) và cũng không có kho kiểu cũ để lùi.")
         return
-    if not kho.is_dir():
-        so.nhac(f"giọng: chưa dùng được — kho giọng {kho} chưa có. Tạo profile bằng "
-                f"`voice-studio make-profile`.")
-        return
-    # Một profile tồn tại ⇔ có `<tên>.wav` trong kho — ĐÚNG luật mà engine giọng dùng
-    # (`voice_studio.profiles.list_profiles` chỉ đếm `.wav`, `_exists` cũng chỉ hỏi `.wav`).
-    # Nới ở đây (nhận cả `.txt` lẻ) là tự tạo XANH GIẢ: doctor bảo ổn, rồi `speak` trả mã 2
-    # giữa lượt chạy. Cổng phải đo đúng thứ engine đo, không phải thứ trông hợp lý.
-    # So tên ở dạng NFC CẢ HAI vế (P1-4): file nhập từ Windows sang macOS mang tên tiếng Việt
-    # dạng NFD, còn `channel.yml` viết NFC — so chuỗi thô thì "Giọng tiên hiệp" ≠ "Giọng tiên
-    # hiệp" và doctor đỏ GIẢ trong khi engine giọng vẫn mở được file.
-    co = {unicodedata.normalize("NFC", p.stem) for p in kho.glob("*.wav")
-          if not p.name.startswith("_")}
+    if nguon == "kho cũ":
+        so.ghi(f"giọng: `voice-studio profiles list` chưa có ở bản đang cài — doctor lùi đọc kho kiểu cũ "
+               f"{kho}. Nâng agent-voice-studio.")
     for kenh, khai in khai_kenh:
         ten = unicodedata.normalize("NFC", str(khai.get("voice_profile") or "").strip())
         if ten and ten not in co:
-            so.hong(f"kênh {kenh} khai voice_profile {ten!r} nhưng kho giọng {kho} không có "
-                    f"{ten}.wav (đang có: {', '.join(sorted(co)) or '(rỗng)'}). Sửa "
+            so.hong(f"kênh {kenh} khai voice_profile {ten!r} nhưng trạm giọng không có profile đó "
+                    f"({ten}{'.wav' if nguon == 'kho cũ' else ''}; đang có: {', '.join(sorted(co)) or '(rỗng)'}). Sửa "
                     f"channel.yml, hoặc tạo profile bằng `voice-studio make-profile`.")
 
 

@@ -10,6 +10,11 @@ phép thay đổi hành vi ở đây:
     3. kết quả   một dòng JSON cuối stdout; log người đọc ở stderr
     4. biến      VOICE_STATION (tên cũ OMNIVOICE_DIR = thư mục engine) · OMNIVOICE_PY
 
+Danh sách giọng (voice-station-restructure): hỏi bằng `voice-studio profiles list --json`
+(`list_profiles`/`profile_names`), KHÔNG đọc thư mục kho giọng — bố cục kho do trạm giọng giữ
+(kiểu phẳng cũ hay `profiles/<tên>/voice/`), marketing không được biết. Lệnh chưa có (bản
+voice-studio cũ) ⇒ `inventory()` lùi đọc kho kiểu cũ và NÓI RA.
+
 **Vì sao subprocess chứ không `import voice_studio`:** engine giọng kéo theo torch (vài
 GB) và một venv riêng. `import` ở tầng module trói CẢ repo marketing vào venv đó, kể cả
 cho việc không dính dáng gì tới giọng — đúng cái bẫy mà bản trước mắc phải: nhét thư mục
@@ -26,6 +31,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import unicodedata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -139,7 +145,9 @@ def python_exe(goc: Path | None = None) -> str:
 
 
 def voices_dir(goc: Path | None = None) -> Path:
-    """Kho giọng: `VOICES_DIR` → `<thư mục engine>/voices`.
+    """[LEGACY] Kho giọng KIỂU PHẲNG CŨ: `VOICES_DIR` → `<thư mục engine>/voices`. Chỉ còn là đường
+    lùi của `inventory()` khi bản voice-studio đang cài chưa có `profiles list`; code mới hỏi
+    `profile_names()`, không gọi hàm này.
 
     Thứ tự này ĐI THEO `voice_studio._env.voices_dir()` từng bước, kể cả nhánh
     `OMNIVOICE_DIR` (tên cũ, trỏ thẳng thư mục engine). Lệch một bước là `doctor` soi một
@@ -153,6 +161,55 @@ def voices_dir(goc: Path | None = None) -> Path:
         return Path(cu).expanduser() / "voices"
     goc = goc or station()
     return goc / str(station_config(goc).get("engine_dir") or "omnivoice") / "voices"
+
+
+# ── danh sách giọng ──────────────────────────────────────────────────────────────────
+
+def list_profiles(goc: Path | None = None, timeout=120) -> list[dict] | None:
+    """Giọng có thật qua `<python trạm giọng> -m voice_studio profiles list --json`.
+
+    Hợp đồng (repo voice-studio): dòng JSON cuối stdout mang `profiles: [{name, kind, markers,
+    default, voice_dir}]`. Trả danh sách dict (đã chuẩn hoá `name` về NFC), hoặc None khi không hỏi
+    được: lệnh chưa có / trạm chưa sẵn / python hỏng — người gọi tự lùi và nói ra."""
+    try:
+        argv = [python_exe(goc), "-m", MODULE, "profiles", "list", "--json"]
+        data = SC.call(argv, prog=f"{PROG} profiles list", timeout=timeout)
+    except SC.StudioError:
+        return None
+    ds = data.get("profiles")
+    if not isinstance(ds, list):
+        return None
+    ra = []
+    for d in ds:
+        if isinstance(d, str):
+            d = {"name": d}
+        if isinstance(d, dict) and str(d.get("name") or "").strip():
+            ra.append({**d, "name": unicodedata.normalize("NFC", str(d["name"]).strip())})
+    return ra
+
+
+def inventory(goc: Path | None = None) -> tuple[set[str] | None, str, Path | None]:
+    """-> `(tên NFC, nguồn, kho)`. nguồn: `cli` (đúng đường) · `kho cũ` (lệnh chưa có -> lùi đọc kho kiểu
+    phẳng, CÓ cảnh báo ở stderr) · `không` (không biết: tên = None). `kho` chỉ có khi nguồn là `kho cũ`."""
+    ds = list_profiles(goc)
+    if ds is not None:
+        return {d["name"] for d in ds}, "cli", None
+    try:
+        kho = voices_dir(goc)
+    except SC.StudioError:
+        return None, "không", None
+    if not kho.is_dir():
+        return None, "không", kho
+    SC.log(f"[voice] CẢNH BÁO: `{PROG} profiles list` chưa dùng được (bản voice-studio cũ?) — lùi đọc kho "
+           f"giọng kiểu cũ {kho}. Nâng agent-voice-studio để marketing thôi đọc thư mục kho.")
+    # Một profile tồn tại ⇔ có `<tên>.wav` — ĐÚNG luật engine giọng dùng (chỉ đếm `.wav`).
+    return ({unicodedata.normalize("NFC", p.stem) for p in kho.glob("*.wav")
+             if not p.name.startswith("_")}, "kho cũ", kho)
+
+
+def profile_names(goc: Path | None = None) -> set[str] | None:
+    """Tên profile giọng CÓ THẬT (NFC), hoặc None khi không xác định được."""
+    return inventory(goc)[0]
 
 
 # ── lệnh `speak` ─────────────────────────────────────────────────────────────────────
