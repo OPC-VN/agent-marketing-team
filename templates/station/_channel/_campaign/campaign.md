@@ -54,6 +54,8 @@ runtime:
   runner_args: ""           # vd "-Brand ai -Publish" · hoặc "-Step create-post" cho run-blog-campaign.ps1
   # prompt: prompt.txt
   # out_dir: daily-out
+  # voice_profile: ""       # giọng RIÊNG của chiến dịch (ghi đè channel.yml: voice_profile; `-Profile` thắng cả hai)
+  # voice_pool: []          # chỉ runner truyện: luân phiên nhiều giọng theo dải chương
   # yt_playlist: ""
   # fb_text_post: false     # true = đăng thêm bài chữ riêng trên Facebook (mặc định KHÔNG)
   #

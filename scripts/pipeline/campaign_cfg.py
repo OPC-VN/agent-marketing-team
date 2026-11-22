@@ -138,6 +138,24 @@ def gop(campaign_dir: Path) -> dict:
 
     ra.update(fm.get("runtime") or {})
 
+    # ── Giọng đọc = CẤU HÌNH, không phải mã (voice-station-restructure DN10) ──────────────
+    # Thứ tự: `campaign.md: runtime.voice_profile` > `channel.yml: voice_profile` (khoá gốc, hoặc
+    # trong khối `brand:`) > `brand.md` (chỉ để đọc bản cũ) > không khai (voice-studio dùng profile
+    # mặc định của trạm). Runner còn một tầng đứng TRƯỚC: tham số `-Profile`. Bản chụp mang cả
+    # nguồn (`voice_profile_source`) để runner ghi vào log "giọng này từ đâu ra".
+    rt = fm.get("runtime") or {}
+    for _gia, _nguon in ((rt.get("voice_profile"), "campaign.md: runtime.voice_profile"),
+                         (kenh_yml.get("voice_profile"), "channel.yml: voice_profile"),
+                         (brand_block.get("voice_profile"), "channel.yml: brand.voice_profile"),
+                         (brand_md.get("voice_profile"), "brand.md: voice_profile")):
+        _gia = str(_gia or "").strip()
+        if _gia:
+            ra["voice_profile"], ra["voice_profile_source"] = _gia, _nguon
+            break
+    else:
+        ra.pop("voice_profile", None)
+        ra.pop("voice_profile_source", None)
+
     # Khối lồng: giữ NGUYÊN hình dạng cho code mới, ĐỒNG THỜI trải phẳng tên cũ cho code
     # hiện tại. Trải phẳng chứ không thay thế — xem ghi chú "hai lớp" ở đầu file.
     for khoi in ("theme", "identity", "titles"):

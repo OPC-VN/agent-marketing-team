@@ -300,14 +300,32 @@ function Get-VideoStation {
 
 function Get-BgmDir {
   <#
-    Thư viện nhạc nền: VOICE_BGM_DIR -> `<trạm video>/assets/news-bgm`. Cả hai vắng -> '' kèm WARN
-    nêu tên biến (bản cũ lấy thư mục ẩn của trạm video trong nhà nên nhạc nền vẫn có; nay tắt thì phải NÓI RA). Nhạc nền là
-    tuỳ chọn nên KHÔNG dừng pipeline — dừng sẽ làm hỏng video đã lên lịch.
+    Thư viện nhạc nền (ÂM THANH => trạm giọng, DN4). Thứ tự:
+      VOICE_BGM_DIR (ép tường minh) -> `station.json: bgm_dir` của trạm giọng (tương đối theo trạm,
+      hợp đồng 1.1.0: `music/library`) -> `<trạm giọng>/music/library` -> (cũ, trạm chưa dời)
+      `<trạm video>/assets/news-bgm`. Chỉ nhận thư mục CÓ SẴN trên đĩa; cái nào cũng vắng ->
+      '' kèm WARN nêu tên biến. Nhạc nền là tuỳ chọn nên KHÔNG dừng pipeline — dừng sẽ làm hỏng
+      video đã lên lịch.
   #>
   $v = Get-EnvVar 'VOICE_BGM_DIR'
   if ($v) { return (Resolve-Home $v) }
-  if ($script:VideoStation) { return [System.IO.Path]::Combine($script:VideoStation, 'assets', 'news-bgm') }
-  Write-Host 'WARN: khong co nhac nen - dat VOICE_BGM_DIR hoac VIDEO_STATION (tram video). Video van dung, khong nhac.'
+  $vs = $script:VoiceStation
+  if ($vs) {
+    $j = Read-JsonFile (Join-Path $vs 'station.json')
+    $rel = if ($j -and $j.bgm_dir) { [string]$j.bgm_dir } else { 'music/library' }
+    $p = if ([System.IO.Path]::IsPathRooted($rel)) { $rel } else { Join-Path $vs $rel }
+    if (Test-Path -LiteralPath $p -PathType Container) { return $p }
+    $p = [System.IO.Path]::Combine($vs, 'music', 'library')
+    if (Test-Path -LiteralPath $p -PathType Container) { return $p }
+  }
+  if ($script:VideoStation) {
+    $cu = [System.IO.Path]::Combine($script:VideoStation, 'assets', 'news-bgm')
+    if (Test-Path -LiteralPath $cu -PathType Container) {
+      Write-Host ('WARN: nhac nen o cay cu ' + $cu + ' (tram chua doi sang <tram giong>/music/library).')
+    }
+    return $cu
+  }
+  Write-Host 'WARN: khong co nhac nen - dat VOICE_BGM_DIR, VOICE_STATION (tram giong) hoac VIDEO_STATION (tram video, cay cu). Video van dung, khong nhac.'
   return ''
 }
 
@@ -703,6 +721,28 @@ function Get-Cfg {
     $c.repo = [System.IO.Path]::GetFullPath((Join-Path (Split-Path $script:RepoRoot -Parent) ([string]$c.repo)))
   }
   return $c
+}
+
+function Resolve-VoiceProfile {
+  <#
+    Giọng đọc của MỘT lượt chạy — là CẤU HÌNH, không phải mã (voice-station-restructure DN10).
+    Thứ tự: tham số `-Profile` của runner -> `campaign.md: runtime.voice_profile` ->
+    `channel.yml: voice_profile` (hai tầng sau do `campaign_cfg.py` ghép sẵn vào bản chụp -Config,
+    kèm `voice_profile_source`) -> không khai thì trả tên RỖNG: runner KHÔNG truyền `--profile` và
+    `voice-studio` tự dùng profile mặc định của trạm (`station.json: default_profile`).
+    Không còn bảng series -> giọng trong mã; đa dạng giọng đến từ marker sắc thái trong kịch bản.
+    -> @{ name; source }. Không bao giờ ném: giọng sai thì `voice-studio` trả mã 2 nói rõ tên đó.
+  #>
+  param([string]$Explicit = '', $Cfg)
+  $e = ([string]$Explicit).Trim()
+  if ($e) { return [pscustomobject]@{ name = $e; source = 'tham so -Profile' } }
+  $v = ''
+  if ($Cfg) { $v = ([string]$Cfg.voice_profile).Trim() }
+  if ($v) {
+    $src = if ($Cfg.voice_profile_source) { [string]$Cfg.voice_profile_source } else { 'campaign.md/channel.yml' }
+    return [pscustomobject]@{ name = $v; source = $src }
+  }
+  return [pscustomobject]@{ name = ''; source = 'khong khai - voice-studio dung profile mac dinh cua tram' }
 }
 
 function Test-Cadence {

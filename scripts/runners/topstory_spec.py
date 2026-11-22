@@ -15,7 +15,7 @@ Thương hiệu KHÔNG có mặc định ở đây — engine cũng không. Thi�
 kèm tên khoá cần khai trong `campaign.md: identity`, không bao giờ lùi về tên của ai.
 
     python topstory_spec.py --top <ngày>-top.json --config <bản chụp> --date 2026-09-28 \
-        --profile my-voice --bgm news-corporate --bgm-volume 0.10 --out <ngày>-spec.json
+        --profile <profile> --bgm news-corporate --bgm-volume 0.10 --out <ngày>-spec.json
 
 Mã thoát: 0 ok · 2 đầu vào sai (thiếu file, JSON hỏng, thiếu khoá thương hiệu).
 """

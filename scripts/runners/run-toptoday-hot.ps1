@@ -23,6 +23,8 @@ param(
   [switch]$SkipResearch,
   [switch]$Publish,
   [switch]$Uat,
+  # Chi phan giai giong + duong (khong nghien cuu/TTS/dang) roi thoat 0 — chay kho de kiem cau hinh.
+  [switch]$ResolveOnly,
   [switch]$Register,
   [string]$TaskName = '',
   [string]$Time = '01:00',
@@ -115,6 +117,16 @@ Log "=== Daily HOT $Label (TOP-1 deep-dive) start ==="
 $bgmEp = Resolve-ForcedBgm -Cfg $cfg -Dir $bgmDir -BrandDir $brandDir
 if (-not $bgmEp.ok) { Log ("ERROR: bgm = '" + $cfg.bgm + "' khong co file mp3 (thu vien: " + $bgmDir + "). Sua campaign.md hoac chep mp3 vao thu vien."); Log '=== failed ==='; exit 1 }
 if (@($bgmCat.missing).Count -gt 0) { Log ('WARN: thu vien nhac nen thieu mp3 cho: ' + (@($bgmCat.missing) -join ', ') + ' (' + $bgmDir + ')') }
+# Giong doc = CAU HINH, khong phai ma (DN10): -Profile > campaign.md runtime.voice_profile >
+# channel.yml voice_profile > khong khai (voice-studio dung profile mac dinh cua tram).
+# Khong con bang series -> giong trong ma; da dang giong den tu marker sac thai trong kich ban.
+$voice = Resolve-VoiceProfile -Explicit $Profile -Cfg $cfg
+Log ('Voice: ' + $(if ($voice.name) { $voice.name } else { '(mac dinh cua tram giong)' }) + '  (' + $voice.source + ')')
+# -ResolveOnly: chi phan giai giong + duong, in ra roi THOAT (khong nghien cuu, khong TTS, khong dang).
+if ($ResolveOnly) {
+  Log ('ResolveOnly: out=' + $outRoot + '  log=' + $logdir + '  bgm_dir=' + $bgmDir)
+  Log '=== resolve-only (khong chay) ==='; exit 0
+}
 # Rào render (P1-24): phép thử HyperFrames rẻ TRƯỚC nghiên cứu/TTS — kẹt thì dừng ngay (mã 5),
 # không đốt agent + TTS + 40 phút. Xem Invoke-RenderPreflight trong brand-paths.ps1.
 if (-not $ovpy) { Log 'ERROR: khong thay python cua tram giong (OMNIVOICE_PY / VOICE_STATION).'; Log '=== failed ==='; exit 3 }
@@ -230,22 +242,10 @@ $bgmVol = if ($cfg.bgm_vol) { [string]$cfg.bgm_vol } else { '0.10' }
 $bgmPath = Select-Bgm -Forced $bgmEp -Catalog $bgmCat -Pick (Read-BgmPick $jsonPath)
 if ($bgmPath -and (Test-Path $bgmPath)) { Log ("BGM: " + (Split-Path $bgmPath -Leaf) + " @ " + $bgmVol) }
 else { $bgmPath = ''; Log 'BGM: tat' }
-Log 'Rendering deep-dive + short (my-voice) ...'
-# --- Luan phien giong (2026-08-26) -------------------------------------------------
-# Khong truyen -Profile thi tu chon theo series + ngay. Deterministic, khong can state:
-# pick-voice.ps1 gan giong cho MOI series chay cung ngay sao cho khong cap nao qua
-# giong nhau (my-voice va my-voice3 la cap sinh doi 0.91, khong bao gio dat canh).
-# Truyen -Profile tuong minh thi van uu tien caller.
-if (-not $Profile) {
-  $vseries = if ($Brand -eq 'data') { 'data-hot' } else { 'ai-hot' }
-  $Profile = & (Join-Path $PSScriptRoot 'pick-voice.ps1') -Series $vseries
-  Log ("Voice: " + $Profile + "  (tu chon theo series ai/data-hot + ngay)")
-}
-# ------------------------------------------------------------------------------------
-
+Log 'Rendering deep-dive + short ...'
 $cfgFile = if ($Config) { $Config } else { Join-Path $brandDir 'brand.json' }
 $rv = Invoke-TopstoryRender -Python $ovpy -JsonPath $jsonPath -ConfigFile $cfgFile -Date $Date `
-        -OutDir $outDir -VoiceProfile $Profile -BgmPath $bgmPath -BgmDir $bgmDir -BgmVol $bgmVol `
+        -OutDir $outDir -VoiceProfile $voice.name -BgmPath $bgmPath -BgmDir $bgmDir -BgmVol $bgmVol `
         -OnLine { param($l) Log ('video: ' + $l) }
 Log ('video-studio: ma ' + $rv.code + ' (' + (Get-VideoStudioCodeText $rv.code) + ')  spec ' + $rv.spec)
 if ($rv.result) {

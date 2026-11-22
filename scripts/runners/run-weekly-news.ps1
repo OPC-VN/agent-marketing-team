@@ -11,6 +11,8 @@ param(
   [string]$Brand = 'ai',
   [string]$Profile = '',
   [switch]$Uat,
+  # Chi phan giai giong + duong (khong nghien cuu/TTS/dang) roi thoat 0 — chay kho de kiem cau hinh.
+  [switch]$ResolveOnly,
   # Bản chụp cấu hình do `campaign_cfg.py` sinh từ `campaign.md`. KHÔNG truyền = chạy y
   # hệt như trước (đọc brand.json). Xem Get-Cfg trong brand-paths.ps1.
   [string]$Config = ''
@@ -45,8 +47,11 @@ if (-not $syspy) { throw 'khong thay Python 3.10+ (dat MARKETING_STUDIO_PY).' }
 # Bộ dựng bản tin tuần (audio từng mục + recap + short + chèn HTML) = module
 # `daily_news_media` trong họ template bản tin của repo agent-video-studio, cài trong venv
 # giọng, gọi bằng `python -m` (không còn đường tới bộ dựng cũ trong trạm giọng).
-# NỢ: đây là module nội bộ của video-studio, KHÔNG phải hợp đồng `video-studio render` —
-# `render --project news-weekly` chỉ dựng video, chưa làm phần audio từng mục + chèn HTML.
+# NỢ (VIỆC MỞ, voice-station-restructure TK3): đây là module nội bộ của video-studio, KHÔNG phải
+# hợp đồng `video-studio … --json` — vi phạm ranh giới ba trạm. `video-studio render --project
+# news-weekly` chỉ dựng video; CLI chưa có lệnh làm phần audio từng mục + chèn HTML (đo 22/11:
+# cli.py chỉ có init/libs/doctor/render/probe/edit/cleanup/reference/preview/avatar/narrate/...).
+# Việc của repo agent-video-studio: thêm lệnh (vd `video-studio news-weekly --json`) rồi đổi dòng dưới.
 # Tên module ghép bằng -join: chuỗi liền của nó chứa tên thư mục engine cũ mà cổng
 # test_khong_tham_chieu_engine_cu đi cấm.
 $media = @('-m', (@('video_studio', 'templates', 'news', 'daily_news_media') -join '.'))
@@ -94,6 +99,16 @@ Log ('cfg: ' + $CfgSrc + $(if ($Config) { '  ' + $Config } else { '' }))   # ngu
 $bgmEp = Resolve-ForcedBgm -Cfg $cfg -Dir $bgmDir -BrandDir $brandDir
 if (-not $bgmEp.ok) { Log ("ERROR: bgm = '" + $cfg.bgm + "' khong co file mp3 (thu vien: " + $bgmDir + ")."); Log '=== run failed ==='; exit 1 }
 if (@($bgmCat.missing).Count -gt 0) { Log ('WARN: thu vien nhac nen thieu mp3 cho: ' + (@($bgmCat.missing) -join ', ') + ' (' + $bgmDir + ')') }
+# Giong doc = CAU HINH, khong phai ma (DN10): -Profile > campaign.md runtime.voice_profile >
+# channel.yml voice_profile > khong khai (voice-studio dung profile mac dinh cua tram).
+# Khong con bang series -> giong trong ma; da dang giong den tu marker sac thai trong kich ban.
+$voice = Resolve-VoiceProfile -Explicit $Profile -Cfg $cfg
+Log ('Voice: ' + $(if ($voice.name) { $voice.name } else { '(mac dinh cua tram giong)' }) + '  (' + $voice.source + ')')
+# -ResolveOnly: chi phan giai giong + duong, in ra roi THOAT (khong nghien cuu, khong TTS, khong dang).
+if ($ResolveOnly) {
+  Log ('ResolveOnly: out=' + $logdir + '  log=' + $logdir + '  bgm_dir=' + $bgmDir)
+  Log '=== resolve-only (khong chay) ==='; exit 0
+}
 # Rào render (P1-24): phép thử HyperFrames rẻ TRƯỚC nghiên cứu/TTS — kẹt thì dừng ngay (mã 5),
 # không đốt agent + TTS + 40 phút. Xem Invoke-RenderPreflight trong brand-paths.ps1.
 if (-not $ovpy) { Log 'ERROR: khong thay python cua tram giong (OMNIVOICE_PY / VOICE_STATION).'; Log '=== run failed ==='; exit 3 }
@@ -181,21 +196,9 @@ Remove-Item Env:NEWS_BGM, Env:NEWS_BGM_VOL, Env:VOICE_BGM, Env:VOICE_BGM_VOL -Er
 if ($bgmPath -and (Test-Path $bgmPath)) { $env:VOICE_BGM = $bgmPath; $env:VOICE_BGM_VOL = $bgmVol; Log ("BGM: " + (Split-Path $bgmPath -Leaf) + " @ " + $bgmVol) }
 else { Log 'BGM: tat' }
 Log 'Media pass: audio + recap video + short (no-inject) ...'
-# --- Luan phien giong (2026-08-26) -------------------------------------------------
-# Khong truyen -Profile thi tu chon theo series + ngay. Deterministic, khong can state:
-# pick-voice.ps1 gan giong cho MOI series chay cung ngay sao cho khong cap nao qua
-# giong nhau (my-voice va my-voice3 la cap sinh doi 0.91, khong bao gio dat canh).
-# Truyen -Profile tuong minh thi van uu tien caller.
-if (-not $Profile) {
-  $vseries = if ($Brand -eq 'data') { 'data-weekly' } else { 'ai-weekly' }
-  $Profile = & (Join-Path $PSScriptRoot 'pick-voice.ps1') -Series $vseries
-  Log ("Voice: " + $Profile + "  (tu chon theo series ai/data-weekly + ngay)")
-}
-# ------------------------------------------------------------------------------------
-
 # Mảng đối số dựng CÓ ĐIỀU KIỆN: PS 5.1 bỏ mất chuỗi rỗng khi truyền cho lệnh ngoài.
 $ma = @($media + @('--html', $target, '--repo', $repo, '--date', $today, '--no-inject', '--brand-config', $brandCfg))
-if ($Profile) { $ma += @('--profile', $Profile) }
+if ($voice.name) { $ma += @('--profile', $voice.name) }
 & $ovpy @ma 2>&1 | ForEach-Object { $l = Format-NativeLine $_; if ($null -ne $l) { Log ('media: ' + $l) } }
 
 $videoDir = Join-Path (Join-Path $repo 'video') $today
