@@ -30,8 +30,28 @@ Nhật ký chung của hai phiên Codex. Thêm mục ở cuối, không sửa m�
 
 ## Cần chủ máy
 
-- (trống)
+- W-P0 · Chọn có dùng bản chụp cấu hình marketing đã lọc.
+- W-P0 · Chọn giữ hay bỏ sửa dở README và có kèm ZIP giọng tùy chọn.
 
 ## Nhật ký
 
 - 2026-11-25 · Claude (Windows) · lập kế hoạch — Kế hoạch rev 4 viết vào 3 repo. Chưa có phiên Codex nào chạy.
+
+- 2026-11-25 10:45 ICT · Codex-W · W-P0 — Đã đẩy kế hoạch từ `origin/main` lên nhánh `macmini-media-sync` ở ba repo. Gói chuyển máy đang chờ quyết định về phần marketing.
+
+  | Repo | Commit kế hoạch | PR nháp | Cổng chống rò |
+  |---|---|---|---|
+  | Marketing | `2aa882f` | [#19](https://github.com/OPC-VN/agent-marketing-team/pull/19) | 31 đạt |
+  | Video | `006b602` | [#18](https://github.com/OPC-VN/agent-video-studio/pull/18) | 17 đạt |
+  | Voice | `691a243` | [#7](https://github.com/OPC-VN/agent-voice-studio/pull/7) | 10 đạt |
+
+  - **Chứng cứ Git.** `python -m pytest -q --tb=no tests/test_no_identity_leak.py` ở ba repo, thêm `tests/test_no_leak.py` ở marketing, đều thoát 0. GitHub xác nhận ba PR nháp đều mở, đích `main`. Commit gốc `ac72677` có [PR riêng #17](https://github.com/OPC-VN/agent-video-studio/pull/17). Cổng chống rò và bốn tệp test của skill short đạt 52 kiểm tra, thoát 0. Đề xuất chủ máy cân nhắc tag `v0.10.1` ở mốc phát hành `75fac7a`. Đây là mốc đã gộp bản phát hành.
+  - **Chứng cứ gói.** Voice Studio export thoát 0. Hai ZIP qua kiểm danh sách tệp và CRC. `PACK-README.md` cùng hai ZIP khớp `PACK-MANIFEST.sha256`, xác minh ba tệp. Dung lượng dùng MB thập phân.
+
+  | Tệp | MB | SHA-256 |
+  |---|---:|---|
+  | `voice.zip` | 157,86 | `fcacfcd57777121a6ae1fc7f6822f366c99866dca1687c8afa8c0b13bcf2da56` |
+  | `video-assets.zip` | 40,95 | `b407953b3dfff45762c624bb96673e24d71a97871cab2eed62e634e055e2a56d` |
+
+  - **Lệch so với kế hoạch.** Tạm dừng `marketing.bundle` vì lịch sử nguồn có sổ đăng, đầu ra, log và đường dẫn tệp có nguy cơ chứa thông tin xác thực. Cần quyết định về bản chụp cấu hình đã lọc.
+  - **Cần chủ máy.** Chọn cách đóng gói marketing, giữ hay bỏ các sửa dở trong README, và có kèm hai ZIP giọng tùy chọn hay không. Các sửa dở trong README vẫn ở checkout gốc.
