@@ -22,7 +22,7 @@ PIP_SANG_IMPORT = {"google-api-python-client": "googleapiclient",
                    "google-auth-httplib2": "google_auth_httplib2", "httplib2": "httplib2",
                    "requests": "requests", "beautifulsoup4": "bs4", "lxml": "lxml",
                    "yt-dlp": "yt_dlp", "openpyxl": "openpyxl",
-                   "faster-whisper": "faster_whisper", "av": "av"}
+                   "faster-whisper": "faster_whisper", "av": "av", "pillow": "PIL"}
 
 
 def test_requirements_runners_KHOP_danh_sach_module_doctor_kiem():
@@ -42,7 +42,7 @@ def test_requirements_runners_KHOP_danh_sach_module_doctor_kiem():
 
 RUNNERS = ROOT / "scripts" / "runners"
 # Đến cùng `voice_studio` khi cài trạm giọng (`pip install -e`), không cài qua requirements-runners.
-DO_VENV_GIONG_CAP = {"voice_studio", "numpy", "soundfile", "torch"}
+DO_VENV_GIONG_CAP = {"voice_studio", "video_studio", "numpy", "soundfile", "torch"}
 # Tên import ≠ tên module trong MODULES: `google.oauth2`/`google.auth` là của google-auth, gói
 # mà google-api-python-client kéo theo (và `googleapiclient` nằm trong MODULES).
 BI_DANH_IMPORT = {"google": "googleapiclient"}

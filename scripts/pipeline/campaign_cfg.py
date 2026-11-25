@@ -48,9 +48,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import stat
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 import md_io  # noqa: E402
@@ -170,6 +171,7 @@ def gop(campaign_dir: Path) -> dict:
         ("identity", "brand_b"): "topstory_brand_b",
         ("identity", "kicker"): "topstory_kicker",
         ("identity", "site"): "topstory_site",
+        ("identity", "logo"): "topstory_logo",
         ("identity", "tagline_short"): "tagline_short",
         ("theme", "video_accents"): "topstory_accents",
         ("theme", "email_accent"): "email_accent",
@@ -181,6 +183,28 @@ def gop(campaign_dir: Path) -> dict:
         v = (fm.get(khoi) or {}).get(con) if isinstance(fm.get(khoi), dict) else None
         if v is not None:
             ra[cu] = v
+
+    logo = ra.get("topstory_logo")
+    if logo is not None:
+        if not isinstance(logo, str) or not logo.strip():
+            raise ValueError("identity.logo phải là đường dẫn tệp ảnh")
+        relative = PureWindowsPath(logo.strip())
+        if relative.anchor or not relative.parts or any(
+                part in (".", "..") or ":" in part for part in relative.parts):
+            raise ValueError("identity.logo phải là đường dẫn tương đối trong thư mục kênh")
+        requested = kenh_dir
+        try:
+            for part in relative.parts:
+                requested = requested / part
+                info = requested.lstat()
+                if stat.S_ISLNK(info.st_mode) or getattr(info, "st_file_attributes", 0) & getattr(
+                        stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0):
+                    raise ValueError("identity.logo không dùng symlink hoặc junction")
+        except OSError as exc:
+            raise ValueError(f"identity.logo không trỏ tới một ảnh cục bộ: {logo}") from exc
+        if not stat.S_ISREG(info.st_mode):
+            raise ValueError(f"identity.logo không trỏ tới một ảnh cục bộ: {logo}")
+        ra["topstory_logo"] = str(requested.resolve())
 
     # ── Mức tự trị: SAU CÙNG, cố ý ──────────────────────────────────────────
     #
@@ -239,6 +263,7 @@ def gop(campaign_dir: Path) -> dict:
     #
     # Tuyệt đối chứ không tương đối: runner `Set-Location` sang thư mục repo tin ở giữa
     # chừng (git pull/push), nên đường tương đối sẽ trỏ sai từ đó trở đi.
+    ra["brand_channel"] = kenh_dir.name
     ra["out_root"] = str(campaign_dir / (ra.get("out_dir") or "out"))
     ra["log_dir"] = str(campaign_dir / "logs")
     # Prompt cũng là thứ RIÊNG của chiến dịch, không phải của kênh: hai chiến dịch cùng

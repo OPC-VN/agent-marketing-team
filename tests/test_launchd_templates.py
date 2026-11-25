@@ -721,3 +721,17 @@ def test_uninstall_all_GO_CA_job_chi_dich_danh(tmp_path):
     """Review 02/10 NS3: công tắc tắt phải tắt được mọi thứ đã bật."""
     (tmp_path / "x").mkdir()
     assert "studio.marketing.weekly-cleanup" in _chon(tmp_path / "x", all=True, uninstall=True)
+
+
+def test_notification_title_comes_from_campaign_metadata(tmp_path):
+    _co_runner(tmp_path)
+    campaign = tmp_path / "kenh" / "chien-dich" / "campaign.md"
+    campaign.write_text(
+        '---\nname: Bản tin thử\nruntime:\n  notification_title: Ban Tin Mau & Updates\n---\n',
+        encoding="utf-8",
+    )
+    result = _chay("--station", str(tmp_path), "--out-dir", str(tmp_path / "preview"),
+                   "--dry-run", "--json", "--map", "studio.marketing.daily-news-a=kenh/chien-dich",
+                   "--only", "studio.marketing.daily-news-a")
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout)["jobs"][0]["notification_title"] == "Ban Tin Mau & Updates"

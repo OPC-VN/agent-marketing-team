@@ -128,6 +128,7 @@ from xml.sax import saxutils
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "lib"))
 import runner_deps as RD  # noqa: E402
+import md_io  # noqa: E402
 import studio_contract as SC  # noqa: E402
 import studio_paths as SP  # noqa: E402
 import voice as VOICE  # noqa: E402
@@ -405,7 +406,8 @@ def nhan() -> list[str]:
 
 
 def render(label: str, bang: dict, bi_mat: dict | None = None,
-           them: list[str] | None = None, lich=None, bien: dict | None = None) -> bytes:
+           them: list[str] | None = None, lich=None, bien: dict | None = None,
+           notification_title: str = "") -> bytes:
     """Điền một mẫu. Còn sót chỗ trống nào là LỖI — không bao giờ ghi ra một plist dở.
 
     Giá trị được THOÁT XML trước khi thay. `~/Code/AI & Data Studio` là tên thư mục hợp lệ
@@ -458,22 +460,37 @@ def render(label: str, bang: dict, bi_mat: dict | None = None,
     t = _CHO_THEM.sub(lambda m: "".join(dong_them), t)
     b = t.encode("utf-8")
     try:
-        plistlib.loads(b)      # XML hỏng thì hỏng NGAY ở đây, không phải lúc launchctl nạp
+        d = plistlib.loads(b)  # XML hỏng thì hỏng NGAY ở đây, không phải lúc launchctl nạp
     except ExpatError as e:
         raise SC.ContractError(
             f"{label}: plist dựng ra không phải XML hợp lệ ({e}). Đây là lỗi CẤU HÌNH — "
             f"một giá trị trong bảng thay thế mang ký tự mà XML không chịu; chạy lại "
             f"nguyên trạng là vô ích. Kiểm các đường dẫn trong `studio.local.json`.") from e
+    args = d.get("ProgramArguments", [])
+    if notification_title and "--title" in args:
+        args[args.index("--title") + 1] = notification_title
     if lich is not None:
-        d = plistlib.loads(b)
         if "StartCalendarInterval" not in d:
             raise SC.ContractError(
                 f"{label}: job này không chạy theo lịch (KeepAlive) — khoá schedule không áp "
                 f"được, bỏ nó khỏi launchd.json")
         d["StartCalendarInterval"] = lich
         # Dựng lại từ dict thì mất chú thích của mẫu; chỉ xảy ra khi người dùng tự đổi lịch.
+    if lich is not None or (notification_title and "--title" in args):
         b = plistlib.dumps(d)
     return b
+
+
+def campaign_notification_title(campaign: Path) -> str:
+    source = campaign / "campaign.md"
+    if not source.is_file():
+        return ""
+    meta, _ = md_io.read_fm(source)
+    runtime = meta.get("runtime") or {}
+    for value in (runtime.get("notification_title"), meta.get("name")):
+        if isinstance(value, str) and value.strip():
+            return " ".join(value.split())
+    return ""
 
 
 def can_khai(label: str) -> bool:
@@ -627,14 +644,18 @@ def lam(a) -> dict:
         if chua_khai:
             SC.log(f"[launchd] nhắc: {l} chưa có {', '.join(chua_khai)} — bỏ dòng đó khỏi "
                    f"plist; bước nào cần sẽ dừng và nêu tên biến")
+        notification_title = campaign_notification_title(tram / kenh / cd) if kenh and cd else ""
         noi_dung = render(l, {**bang, "__CHANNEL__": kenh, "__CAMPAIGN__": cd,
                               "__RUNNER__": runner},
-                          bi_mat=bi_mat, them=them_dong, lich=k.get("schedule"), bien=bien)
+                          bi_mat=bi_mat, them=them_dong, lich=k.get("schedule"), bien=bien,
+                          notification_title=notification_title)
         dich = dich_dir / f"{l}.plist"
         # Chỉ TÊN biến đi vào log/JSON — không bao giờ giá trị.
         muc = {"label": l, "channel": kenh, "campaign": cd, "plist": str(dich),
                "bytes": len(noi_dung), "secret_env": sorted(bi_mat),
                "secret_env_missing": sorted(chua_khai)}
+        if notification_title and "--title" in plistlib.loads(noi_dung).get("ProgramArguments", []):
+            muc["notification_title"] = notification_title
         doi_ten = {a: b for a, b in nguon_env.items() if a != b}
         if doi_ten:
             muc["secret_env_from"] = doi_ten          # chỉ TÊN -> TÊN, không giá trị

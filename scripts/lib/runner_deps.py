@@ -34,7 +34,7 @@ REQ_FILE = "requirements-runners.txt"
 # đọc chương mà doctor vẫn báo đủ). Giữ khớp REQ_FILE: cổng `tests/test_runner_deps.py` so hai
 # danh sách và quét mã `scripts/runners/**` để không import/parser nào lọt ngoài danh sách.
 MODULES = ("googleapiclient", "google_auth_oauthlib", "google_auth_httplib2", "httplib2",
-           "requests", "bs4", "lxml", "yt_dlp", "openpyxl", "faster_whisper", "av")
+           "requests", "bs4", "lxml", "yt_dlp", "openpyxl", "faster_whisper", "av", "PIL")
 # Runner tin/truyện của repo: chiến dịch khai một trong các tên này thì `doctor` kiểm bộ trên.
 RUNNER_TIN = ("run-toptoday-hot.ps1", "run-weekly-news.ps1", "run-weekly-repo.ps1")
 RUNNER_TRUYEN = ("run-daily-truyen.ps1",)

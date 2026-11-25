@@ -84,6 +84,19 @@ speak(file="kich-ban.txt", out="audio.mp3", profile=None)   # None = mặc đị
 
 ## 4. Video dài — HyperFrames + OmniVoice
 
+Với video tin tức, demo và giải thích dựng theo từng cảnh trong chiến dịch, áp dụng storyboard
+ảnh phải cho cả Full lẫn Short. Mỗi cảnh từ mở đến kết có ảnh tĩnh riêng và có nguồn trong thư
+mục bài. Bên trái đặt tiêu đề và 2–4 thẻ hành động dưới tiêu đề, dùng icon theo nghĩa và chuyển
+động theo nhịp thoại. Tìm lại ảnh khi thiếu, sai nội dung hoặc trùng. Giữ bước dựng nếu vẫn thiếu
+ảnh hợp lệ. Kiểm ảnh và chữ ở khung thật của cả hai tỷ lệ. Xem
+[`news_image_right_brief.md`](../../scripts/runners/news_image_right_brief.md) để chuẩn bị đầu vào.
+Khi dùng Top Story, chọn `top_story.visual_layout: image-right` sau khi storyboard đã đạt.
+Với video ghép từ podcast, gọi `make_podcast_video.py --image-right`. Giữ mảng `scenes.json` hiện có
+và bổ sung cho từng cảnh `title`, `src` (ảnh cục bộ), `asset_url`, `media_credit`, `media_alt`,
+`diagram.items` với 2–4 bước có `t/d/icon`. Dùng `--size 1080x1920` cho bản dọc và một bản audio
+dành riêng cho Short. Tệp lịch sử được phép dựng lại theo schema cũ.
+
+
 HyperFrames render HTML/CSS thành MP4 câm; OmniVoice lồng tiếng vào.
 
 **Một lệnh, ra video hoàn chỉnh** (cách dùng mặc định):
@@ -176,3 +189,18 @@ Asset. `asset_ref` chỉ ghi *lựa chọn khác mặc định*, không phải d
 - Render thất bại 2 lần liên tiếp → dừng, báo lỗi thật. Không retry mù.
 - Cờ `= no` nhưng người bảo "cứ dựng đi" → sửa cờ trong Excel trước, rồi mới dựng. Excel là
   nguồn sự thật, không phải câu nói trong chat.
+
+## Chuẩn bị Windows để dùng bố cục ảnh phải
+
+1. Cập nhật repo Video Studio trước, rồi cập nhật repo Marketing. Dùng đúng Python mà
+   `OMNIVOICE_PY` trỏ tới. Cài Video Studio từ bản clone đã cập nhật (`pip install -e` nếu
+   môi trường chưa dùng editable), rồi cài `requirements-runners.txt` của Marketing vào cùng venv.
+2. Kiểm tra Python đó import được `video_studio.image_right` và `PIL` trước khi chạy một lượt.
+3. Trong dữ liệu trạm riêng, khai `campaign.md → runtime.video_layout: image-right`.
+   Khai `identity.brand_a`, `identity.brand_b`, `identity.site`, và nếu cần,
+   `identity.logo: assets/logo.png`. Đường logo tính từ thư mục kênh. Giữ tên giọng
+   trong `runtime.voice_profile` hoặc cấu hình kênh, sau đó kiểm tra profile có thật trong trạm giọng.
+4. Chạy `run.ps1 -ResolveOnly` từ thư mục chiến dịch. Với runner bản tin ngày,
+   thêm `-RenderOnly` khi muốn dựng và giữ video cục bộ. Khi nghiệm thu một lượt thật, kiểm tra cả
+   hai MP4 tại các đoạn có ảnh và storyboard trước khi thay cấu hình đăng theo lịch.
+   Logo, profile, cấu hình riêng và bí mật được đồng bộ qua trạm của người dùng.

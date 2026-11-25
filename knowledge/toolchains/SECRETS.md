@@ -281,3 +281,6 @@ ls -ld ~/.secret                                                # macOS: phải 
 
 Chỉ xoá bản gốc ở chỗ cũ **sau khi một chu kỳ chạy đầy đủ báo xanh**. Trước đó chúng là lưới
 an toàn, không phải rác.
+
+`HYPERFRAMES_WORKDIR` là đường dẫn tùy chọn của project dựng Video Studio. Chế độ
+`-PreviewRoot` cấp thư mục riêng trong lúc dựng và phục hồi giá trị trước đó.

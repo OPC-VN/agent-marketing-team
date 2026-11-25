@@ -22,7 +22,9 @@ param(
   [string]$Profile = '',
   [switch]$SkipResearch,
   [switch]$Publish,
+  [switch]$RenderOnly,
   [switch]$Uat,
+  [string]$PreviewRoot = '',
   # Chi phan giai giong + duong (khong nghien cuu/TTS/dang) roi thoat 0 — chay kho de kiem cau hinh.
   [switch]$ResolveOnly,
   [switch]$Register,
@@ -43,10 +45,11 @@ try { [Console]::OutputEncoding = $utf8 } catch {}
 
 $engine   = $PSScriptRoot
 . (Join-Path $engine 'brand-paths.ps1')
-Set-SecretEnv
-$brandDir = Get-BrandDir $Brand
+if (-not $PreviewRoot) { Set-SecretEnv }
+$brandDir = Get-BrandDir $Brand -Config $Config
 $cfg   = Get-Cfg -Config $Config -BrandDir $brandDir
 $Label = $cfg.label
+$imageRight = $cfg.video_layout -eq 'image-right'
 
 $self    = Join-Path $engine 'run-toptoday-hot.ps1'
 # Script nghiên cứu last30days: L30_SCRIPT -> thư mục plugin của Claude (Find-Last30Days).
@@ -72,16 +75,38 @@ $bgmCat  = Get-BgmCatalog $bgmDir
 $bgmLib  = $bgmCat.lib
 $bgmListText = $bgmCat.text
 $logdir  = if ($cfg.log_dir) { [string]$cfg.log_dir } else { Join-Path $brandDir 'logs' }
+$assetHistory = $outRoot
+if ($PreviewRoot) {
+  if ($Publish -or $Register) { throw 'PreviewRoot is local render only; omit Publish and Register.' }
+  $outRoot = Join-Path $PreviewRoot 'input'
+  $logdir = Join-Path $PreviewRoot 'logs'
+}
 New-Item -ItemType Directory -Force -Path $logdir, $outRoot | Out-Null
 
 # -Register: create a daily Task Scheduler entry and exit.
 if ($Register) {
   if ($env:OS -ne 'Windows_NT') { Write-Host '-Register chi co tren Windows. macOS: scripts/runners/install_launchd.py'; exit 2 }
   if (-not $TaskName) { $TaskName = "Daily Hot $Label" }
-  $pubFlag = ''; if ($Publish) { $pubFlag = ' -Publish' }
+  $pubFlag = ''; if ($Publish -and -not $RenderOnly) { $pubFlag = ' -Publish' }
   # Trình PowerShell ĐANG chạy file này — không viết cứng tên chương trình.
   $psHost = (Get-Process -Id $PID).Path
   $action = "`"$psHost`" -NoProfile -ExecutionPolicy Bypass -File `"$self`" -Brand $Brand$pubFlag"
+  if ($Config) {
+    # Rebuild the snapshot on each invocation, using the station's campaign entry point.
+    $campaignName = [string]$cfg._meta.campaign
+    if (-not $campaignName -or $campaignName -in '.', '..' -or $campaignName -match '[\\/:"]') {
+      throw 'Cannot register a configured runner without its campaign name.'
+    }
+    $entry = Join-Path (Join-Path $brandDir $campaignName) 'run.ps1'
+    $notify = Get-EnvVar 'NOTIFY_RUN'
+    if (-not (Test-Path -LiteralPath $entry -PathType Leaf) -or
+        -not $notify -or -not (Test-Path -LiteralPath $notify -PathType Leaf)) {
+      throw 'Configured registration needs the campaign run.ps1 and NOTIFY_RUN.'
+    }
+    $entryArgs = if ($Publish -and -not $RenderOnly) { '-Publish' } else { '-RenderOnly' }
+    $action = "`"$psHost`" -NoProfile -ExecutionPolicy Bypass -File `"$notify`" -Title `"$TaskName`" -Script `"$entry`""
+    if ($entryArgs) { $action += " -ScriptArgs `"$entryArgs`"" }
+  }
   schtasks /Create /TN $TaskName /TR $action /SC DAILY /MO $EveryDays /ST $Time /F
   Write-Host "Registered '$TaskName' every $EveryDays day(s) at $Time."
   exit $LASTEXITCODE
@@ -199,6 +224,7 @@ if ($SkipResearch -and (JsonOk)) {
     $seenFull = $seen.Trim(); if ($exclude) { $seenFull += "`n" + $exclude.TrimEnd() }
     $prompt = $tmpl.Replace('{{DISPLAY_DATE}}', $dispDate).Replace('{{JSON_PATH}}', $jsonPath).Replace('{{DIR}}', $outDir).Replace('{{DATE}}', $Date).Replace('{{L30_SCRIPT}}', $l30).Replace('{{YTDLP}}', $ovpy).Replace('{{SEEN_LIST}}', $seenFull).Replace('{{VIEWPOINT}}', $viewpoint).Replace('{{BGM_LIST}}', $bgmListText)
 
+    if ($imageRight) { $prompt += "`n`n" + (Get-TopstoryVisualBrief) }
     Log ("Nghien cuu qua agent_call (engine theo order) ... [lan $att/3]")
     $ac = Invoke-AgentCall -Python $syspy -Prompt $prompt -Tools $tools -Cwd $outDir `
       -Expect @($jsonPath + ':800') -OnLine { param($s) Log ('agent: ' + $s) }
@@ -228,6 +254,14 @@ if ($SkipResearch -and (JsonOk)) {
 
 if (-not (JsonOk)) { Log 'ERROR: -top.json missing/too small. Abort.'; Log '=== failed ==='; exit 1 }
 Log ('JSON OK, ' + (Get-Item $jsonPath).Length + ' bytes')
+$renderInput = $jsonPath
+if ($imageRight) {
+  $assetReady = Invoke-TopstoryAssetGate -Python $ovpy -AgentPython $syspy -JsonPath $jsonPath `
+    -HistoryDir $assetHistory -ResearchContext "Campaign prompt: $prompt0" -NoRepair:$SkipResearch `
+    -OnLine { param($line) Log $line }
+  if ($assetReady.code -ne 0) { Log '=== failed before render ==='; exit $assetReady.code }
+  $renderInput = $assetReady.path
+}
 
 # Thương hiệu (a, b, kicker, site, pronounce) đi TRONG spec — topstory_spec.py đọc từ bản chụp
 # (campaign.md: identity + channel.yml: brand). Riêng màu nhấn: template topstory của
@@ -244,9 +278,18 @@ if ($bgmPath -and (Test-Path $bgmPath)) { Log ("BGM: " + (Split-Path $bgmPath -L
 else { $bgmPath = ''; Log 'BGM: tat' }
 Log 'Rendering deep-dive + short ...'
 $cfgFile = if ($Config) { $Config } else { Join-Path $brandDir 'brand.json' }
-$rv = Invoke-TopstoryRender -Python $ovpy -JsonPath $jsonPath -ConfigFile $cfgFile -Date $Date `
-        -OutDir $outDir -VoiceProfile $voice.name -BgmPath $bgmPath -BgmDir $bgmDir -BgmVol $bgmVol `
-        -OnLine { param($l) Log ('video: ' + $l) }
+$priorWorkdir = [Environment]::GetEnvironmentVariable('HYPERFRAMES_WORKDIR', 'Process')
+try {
+  if ($PreviewRoot) {
+    $env:HYPERFRAMES_WORKDIR = Join-Path $PreviewRoot ('render-' + [guid]::NewGuid().ToString('N'))
+  }
+  $rv = Invoke-TopstoryRender -Python $ovpy -JsonPath $renderInput -ConfigFile $cfgFile -Date $Date `
+          -OutDir $outDir -VoiceProfile $voice.name -BgmPath $bgmPath -BgmDir $bgmDir -BgmVol $bgmVol `
+          -OnLine { param($l) Log ('video: ' + $l) }
+} finally {
+  if ($PreviewRoot) { [Environment]::SetEnvironmentVariable('HYPERFRAMES_WORKDIR', $priorWorkdir, 'Process') }
+}
+
 Log ('video-studio: ma ' + $rv.code + ' (' + (Get-VideoStudioCodeText $rv.code) + ')  spec ' + $rv.spec)
 if ($rv.result) {
   foreach ($o in @($rv.result.outputs)) { Log ('video-studio: ' + $o.kind + ' ' + $o.duration + 's -> ' + $o.path) }
@@ -259,7 +302,7 @@ $long  = Join-Path $outDir ($Date + '-top.mp4')
 $short = Join-Path $outDir ($Date + '-top-short.mp4')
 if ((Test-Path $long) -and (Test-Path $short)) {
   Log ("DONE -> $long  +  $short")
-  if ($Publish) {
+  if ($Publish -and -not $RenderOnly) {
     Log 'Publishing (YouTube + hot-today page + Facebook + Excel) ...'
     $pub = Join-Path $engine 'publish-hot-news.ps1'
     # MUST be a hashtable splat (named binding). An array splat @('-Brand',$Brand,...)

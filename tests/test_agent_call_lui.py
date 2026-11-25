@@ -391,3 +391,18 @@ def test_mau_va_ten_cung_cung_mot_model_KHONG_goi_hai_lan(lam, tmp_path, monkeyp
     ra, _ = _goi(cfg, tmp_path)
     assert [t["model"] for t in ra["tried"]].count("claude-opus-5-5-high") == 1
     assert ra["engine"] == "claude"
+
+
+def test_missing_artifact_then_quota_reports_engine_failure(lam, tmp_path):
+    cfg = lam(["codex:best", "agy:best"], codex=[OK], agy=[QUOTA])
+    ra, _ = _goi(cfg, tmp_path, expect=[f"{tmp_path / 'required.json'}:10"])
+    assert _chuoi(ra) == [("codex", "engine"), ("codex", "engine"), ("agy", "quota")]
+    assert ra["code"] == AC.ENGINE_ERROR
+    assert ra["kind"] == "engine"
+    assert ra["engine"] == "codex"
+    assert "artifact" in ra["error"]
+
+
+def test_individual_quota_reached_is_quota():
+    result = AC.classify("agy", 1, "", "error: Individual quota reached. Resets in 1h20m47s.")
+    assert result["kind"] == "quota"

@@ -1,7 +1,7 @@
 ---
 name: repo-today
 description: >
-  Use when the user wants a deep-dive video about today's top trending GitHub repo (News v2: animated background, infographic, OmniVoice subtitles), or about one repo they name. Not: general AI-news or topic videos (toptoday); standalone video editing (video-routing).
+  Use when the user wants a deep-dive video about today's top trending GitHub repo (storyboard with source visuals and narration), or about one repo they name. Not: general AI-news or topic videos (toptoday); standalone video editing (video-routing).
 ---
 
 # repo-today — adapter nguồn

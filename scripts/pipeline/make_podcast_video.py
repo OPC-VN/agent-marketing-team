@@ -14,11 +14,15 @@ scenes.json item:
   cover ảnh:   {"kind":"image","src":"youtube/thumbnail.png","raw":true,"weight":1.0}
                (src phân giải TƯƠNG ĐỐI theo thư mục của scenes.json)
 
+Cảnh mới dùng --image-right hoặc khai layout: image-right trên mọi cảnh. Xem ASSET_TOOLCHAIN.
+Dữ liệu danh sách cũ dùng được để dựng lại sản phẩm lịch sử.
+
 CLI: python make_podcast_video.py --audio A\audio.mp3 --scenes scenes.json --meta meta.json
        --out A\video.mp4 [--size 1280x720] [--no-images]
 """
 from __future__ import annotations
 import argparse, json, os, shutil, subprocess, sys, tempfile, urllib.parse, urllib.request
+from pathlib import Path
 
 # Chrome/ffmpeg dò ở MỘT chỗ cho mọi hệ điều hành (CHROME_BIN, FFMPEG_DIR): scripts/lib/media_tools.py
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "lib"))
@@ -310,6 +314,79 @@ def build_video(audio, scenes, out, base_dir, W, H, b, T=0.5, use_images=True):
     return os.path.abspath(out)
 
 
+def build_image_right_video(audio, scenes, out, base_dir, width, height, brand, *, brand_root=None):
+    """Use the shared Top Story layout and preserve the supplied narration."""
+    from video_studio import projects, render
+    from video_studio.contract import ContractError
+    from video_studio.image_right import template as top
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "runners"))
+    from news_asset_gate import fingerprint, local_asset, source
+
+    if not isinstance(scenes, list) or len(scenes) < 2:
+        raise ValueError("image-right requires at least an opening and closing scene")
+    if width * 9 == height * 16:
+        head, tag = top._LONG_HEAD, "L"
+    elif width * 16 == height * 9:
+        head, tag = top._SHORT_HEAD, "S"
+    else:
+        raise ValueError("image-right supports only 16:9 and 9:16")
+    base = Path(base_dir).resolve()
+    normalized = []
+    photos, urls = [], set()
+    for index, scene in enumerate(scenes, 1):
+        try:
+            photo = local_asset(base, scene["src"])
+            url = source(scene["asset_url"])
+            credit = str(scene["media_credit"]).strip()
+            relevance = str(scene["media_alt"]).strip()
+            if not credit or not relevance:
+                raise ValueError("missing photo credit or relevance")
+            hash_, visual = fingerprint(photo)
+            if url in urls or any(h == hash_ or (n ^ visual).bit_count() <= 3 for h, n in photos):
+                raise ValueError("repeated photo")
+            photos.append((hash_, visual))
+            urls.add(url)
+            normalized.append({**scene, "media": [{"type": "image", "src": photo.relative_to(base).as_posix()}]})
+        except (KeyError, OSError, TypeError, ValueError) as exc:
+            raise ValueError(f"scene {index}: {exc}") from exc
+    story = {"visual_layout": "image-right", "cover_visual": normalized[0],
+             "sections": normalized[1:-1], "outro_visual": normalized[-1]}
+    try:
+        top._validated_scenes(story, [], str(base))
+    except ContractError as exc:
+        raise ValueError(str(exc)) from exc
+    duration = audio_duration(audio)
+    if duration <= 0:
+        raise ValueError("cannot read narration duration")
+    weights = [max(.4, float(scene.get("weight", 1))) for scene in scenes]
+    blocks = [{"kind": "intro" if i == 0 else "outro" if i == len(scenes) - 1 else "sec",
+               "beats": None, "dur": duration * weight / sum(weights)}
+              for i, weight in enumerate(weights)]
+    title = str(brand.get("a") or brand["site_name"])
+    identity = {"a": title, "b": str(brand.get("b") or "Podcast"), "site": BR.home_domain(brand)}
+    if brand.get("logo"):
+        identity["logo"] = str(local_asset(Path(brand_root or base).resolve(), brand["logo"]))
+    if brand.get("accent"):
+        identity["accent"] = brand["accent"]
+    top._apply_branding(identity)
+    seed = Path(projects.seed_dir()) / "hyperframes.json"
+    dest = Path(out).resolve()
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=dest.parent) as tmp:
+        work = Path(tmp)
+        shutil.copy2(seed, work / seed.name)
+        composition = top._build(story, blocks, duration, head, str(base), tag, project_dir=str(work))
+        render.write_index(str(work), composition, libs=("gsap",))
+        silent, pending = work / "silent.mp4", work / "video.mp4"
+        render.render_project(str(work), str(silent), label="campaign podcast")
+        subprocess.run([_ff("ffmpeg"), "-v", "error", "-i", str(silent), "-i", os.path.abspath(audio),
+                        "-map", "0:v:0", "-map", "1:a:0", "-vf", f"scale={width}:{height}",
+                        "-c:v", "libx264", "-preset", "veryfast", "-c:a", "aac", "-shortest",
+                        "-movflags", "+faststart", str(pending)], check=True, timeout=1200)
+        pending.replace(dest)
+    return str(dest)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--audio", required=True)
@@ -318,6 +395,7 @@ def main(argv=None):
     ap.add_argument("--out", required=True)
     ap.add_argument("--size", default="1280x720")
     ap.add_argument("--no-images", action="store_true")
+    ap.add_argument("--image-right", action="store_true", help="Use the two-column scene template")
     ap.add_argument("--brand", default="",
                     help="file khai khối `brand:` (json/yml). Bỏ trống thì đi ngược lên từ "
                          "--scenes tìm channel.yml của kênh.")
@@ -335,7 +413,18 @@ def main(argv=None):
     # audio dời sang atlas/ còn scenes.json ở gốc thì mọi "src" đều trỏ hụt — và ảnh
     # cover rơi mất mà video vẫn dựng ra, không ai báo.
     base_dir = os.path.dirname(os.path.abspath(a.scenes))
-    out = build_video(a.audio, scenes, a.out, base_dir, W, H, b, use_images=not a.no_images)
+    split = a.image_right or (isinstance(scenes, list) and any(
+        isinstance(scene, dict) and scene.get("layout") == "image-right" for scene in scenes))
+    if split and a.no_images:
+        ap.error("--image-right requires images")
+    brand_src = Path(a.brand) if a.brand else BR.tim_kenh(a.meta or a.scenes)
+    try:
+        out = (build_image_right_video(a.audio, scenes, a.out, base_dir, W, H, b,
+                                       brand_root=brand_src.parent if brand_src else None) if split
+               else build_video(a.audio, scenes, a.out, base_dir, W, H, b, use_images=not a.no_images))
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as e:
+        sys.stderr.write(f"make_podcast_video: {e}\n")
+        return 2
     print(json.dumps({"out": out, "scenes": len(scenes)}, ensure_ascii=False))
     print(f"OK {out}")
     return 0

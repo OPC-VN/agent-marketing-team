@@ -38,6 +38,7 @@ BRAND_MAP = (
     ("topstory_brand_b", "b"),
     ("topstory_site", "site"),
     ("topstory_kicker", "kicker"),
+    ("topstory_logo", "logo"),
 )
 
 

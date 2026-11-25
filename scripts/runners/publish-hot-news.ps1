@@ -30,7 +30,7 @@ $env:PYTHONIOENCODING = 'utf-8'; $env:PYTHONUTF8 = '1'
 $engine   = $PSScriptRoot
 . (Join-Path $engine 'brand-paths.ps1')
 Set-SecretEnv
-$brandDir = Get-BrandDir $Brand
+$brandDir = Get-BrandDir $Brand -Config $Config
 $cfg = Get-Cfg -Config $Config -BrandDir $brandDir
 $Label       = $cfg.label
 $repo        = $cfg.repo

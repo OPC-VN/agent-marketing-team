@@ -187,25 +187,76 @@ if (BriefOk) {
 if (-not (BriefOk)) { Log 'ERROR: briefing missing/too small.'; Log '=== run failed ==='; exit 1 }
 Log ('Briefing OK, ' + (Get-Item $target).Length + ' bytes')
 
-$env:HF_HUB_OFFLINE = '1'; $env:TRANSFORMERS_OFFLINE = '1'
-# Nhạc nền (mix 10% dưới giọng đọc) — AI CHỌN theo nội dung (field "bgm" trong sidecar), áp cho CẢ recap + short.
-# brand.json "bgm": tên-style/đường-dẫn = ÉP cố định; "" = TẮT; bỏ trống = theo lựa chọn của AI.
-$bgmVol = if ($cfg.bgm_vol) { [string]$cfg.bgm_vol } else { '0.10' }
-$bgmPath = Select-Bgm -Forced $bgmEp -Catalog $bgmCat -Pick (Read-BgmPick ($target + '.json'))
-# Bộ dựng bản tin trộn nhạc ở bước ghép tiếng theo biến VOICE_BGM/VOICE_BGM_VOL (engine giọng;
-# tên cũ NEWS_BGM* chỉ còn đọc một phiên bản) — gỡ cả hai bộ tên trước để không sót giá trị cũ.
-Remove-Item Env:NEWS_BGM, Env:NEWS_BGM_VOL, Env:VOICE_BGM, Env:VOICE_BGM_VOL -ErrorAction SilentlyContinue
-if ($bgmPath -and (Test-Path $bgmPath)) { $env:VOICE_BGM = $bgmPath; $env:VOICE_BGM_VOL = $bgmVol; Log ("BGM: " + (Split-Path $bgmPath -Leaf) + " @ " + $bgmVol) }
-else { Log 'BGM: tat' }
-Log 'Media pass: audio + recap video + short (no-inject) ...'
-# Mảng đối số dựng CÓ ĐIỀU KIỆN: PS 5.1 bỏ mất chuỗi rỗng khi truyền cho lệnh ngoài.
-$ma = @($media + @('--html', $target, '--repo', $repo, '--date', $today, '--no-inject', '--brand-config', $brandCfg))
-if ($voice.name) { $ma += @('--profile', $voice.name) }
-& $ovpy @ma 2>&1 | ForEach-Object { $l = Format-NativeLine $_; if ($null -ne $l) { Log ('media: ' + $l) } }
+if ($cfg.video_layout -eq 'image-right') {
+  # Keep the weekly HTML and editorial sidecar as sources for a separate video storyboard.
+  $videoOutRoot = if ($cfg.out_root) { [string]$cfg.out_root } else { Join-Path $brandDir 'weekly-out' }
+  $editionDir = Join-Path $videoOutRoot $today
+  New-Item -ItemType Directory -Force -Path $editionDir -ErrorAction Stop | Out-Null
+  $videoBrief = Join-Path $editionDir ($today + '-top.json')
+  $researchContext = @"
+  Read this weekly brief and its editorial sidecar as inputs only:
+  $target
+  $target.json
+  Make a recap of the selected stories, using the weekly video segments for their order and arguments.
+  Create short narration for each segment, and distinct full and short opening and closing.
+  Do not modify either source file or write outside the video brief folder.
+"@
+  $assetReady = Invoke-TopstoryAssetGate -Python $ovpy -AgentPython $syspy -JsonPath $videoBrief `
+    -HistoryDir $videoOutRoot -ExpectedChapters 0 -ResearchContext $researchContext `
+    -OnLine { param($line) Log $line }
+  if ($assetReady.code -ne 0) { Log '=== run failed before media ==='; exit $assetReady.code }
 
-$videoDir = Join-Path (Join-Path $repo 'video') $today
-$recapFile = Join-Path $videoDir ($today + '.mp4')
-$shortFile = Join-Path $videoDir ($today + '-short.mp4')
+  $env:HF_HUB_OFFLINE = '1'; $env:TRANSFORMERS_OFFLINE = '1'
+  # Existing article audio is still used by the website.
+  Log 'Media pass: article audio (no-inject) ...'
+  $ma = @($media + @('--html', $target, '--repo', $repo, '--date', $today,
+                     '--no-inject', '--audio-only', '--brand-config', $brandCfg))
+  if ($voice.name) { $ma += @('--profile', $voice.name) }
+  & $ovpy @ma 2>&1 | ForEach-Object { $l = Format-NativeLine $_; if ($null -ne $l) { Log ('media: ' + $l) } }
+  if ($LASTEXITCODE -ne 0) { Log 'ERROR: article audio failed'; exit 1 }
+
+  $bgmVol = if ($cfg.bgm_vol) { [string]$cfg.bgm_vol } else { '0.10' }
+  $bgmPath = Select-Bgm -Forced $bgmEp -Catalog $bgmCat -Pick (Read-BgmPick ($target + '.json'))
+  $video = Invoke-TopstoryRender -Python $ovpy -JsonPath $assetReady.path -ConfigFile $brandCfg -Date $today `
+    -OutDir $editionDir -VoiceProfile $voice.name -BgmPath $bgmPath -BgmDir $bgmDir -BgmVol $bgmVol `
+    -OnLine { param($line) Log ('video: ' + $line) }
+  if ($null -eq $video -or $video.code -ne 0) { Log 'ERROR: recap render failed'; exit 1 }
+  $renderedLong = Join-Path $editionDir ($today + '-top.mp4')
+  $renderedShort = Join-Path $editionDir ($today + '-top-short.mp4')
+  foreach ($path in @($renderedLong, $renderedShort, ($renderedLong + '.chapters.json'))) {
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf) -or (Get-Item -LiteralPath $path).Length -le 0) {
+      Log ('ERROR: missing recap output ' + $path)
+      exit 1
+    }
+  }
+  $videoDir = Join-Path (Join-Path $repo 'video') $today
+  New-Item -ItemType Directory -Force -Path $videoDir -ErrorAction Stop | Out-Null
+  $recapFile = Join-Path $videoDir ($today + '.mp4')
+  $shortFile = Join-Path $videoDir ($today + '-short.mp4')
+  Copy-Item -LiteralPath $renderedLong -Destination $recapFile -Force -ErrorAction Stop
+  Copy-Item -LiteralPath $renderedShort -Destination $shortFile -Force -ErrorAction Stop
+  Copy-Item -LiteralPath ($renderedLong + '.chapters.json') -Destination ($recapFile + '.chapters.json') -Force -ErrorAction Stop
+} else {
+  $env:HF_HUB_OFFLINE = '1'; $env:TRANSFORMERS_OFFLINE = '1'
+  # Nhạc nền (mix 10% dưới giọng đọc) — AI CHỌN theo nội dung (field "bgm" trong sidecar), áp cho CẢ recap + short.
+  # brand.json "bgm": tên-style/đường-dẫn = ÉP cố định; "" = TẮT; bỏ trống = theo lựa chọn của AI.
+  $bgmVol = if ($cfg.bgm_vol) { [string]$cfg.bgm_vol } else { '0.10' }
+  $bgmPath = Select-Bgm -Forced $bgmEp -Catalog $bgmCat -Pick (Read-BgmPick ($target + '.json'))
+  # Bộ dựng bản tin trộn nhạc ở bước ghép tiếng theo biến VOICE_BGM/VOICE_BGM_VOL (engine giọng;
+  # tên cũ NEWS_BGM* chỉ còn đọc một phiên bản) — gỡ cả hai bộ tên trước để không sót giá trị cũ.
+  Remove-Item Env:NEWS_BGM, Env:NEWS_BGM_VOL, Env:VOICE_BGM, Env:VOICE_BGM_VOL -ErrorAction SilentlyContinue
+  if ($bgmPath -and (Test-Path $bgmPath)) { $env:VOICE_BGM = $bgmPath; $env:VOICE_BGM_VOL = $bgmVol; Log ("BGM: " + (Split-Path $bgmPath -Leaf) + " @ " + $bgmVol) }
+  else { Log 'BGM: tat' }
+  Log 'Media pass: audio + recap video + short (no-inject) ...'
+  # Mảng đối số dựng CÓ ĐIỀU KIỆN: PS 5.1 bỏ mất chuỗi rỗng khi truyền cho lệnh ngoài.
+  $ma = @($media + @('--html', $target, '--repo', $repo, '--date', $today, '--no-inject', '--brand-config', $brandCfg))
+  if ($voice.name) { $ma += @('--profile', $voice.name) }
+  & $ovpy @ma 2>&1 | ForEach-Object { $l = Format-NativeLine $_; if ($null -ne $l) { Log ('media: ' + $l) } }
+
+  $videoDir = Join-Path (Join-Path $repo 'video') $today
+  $recapFile = Join-Path $videoDir ($today + '.mp4')
+  $shortFile = Join-Path $videoDir ($today + '-short.mp4')
+}
 $ytpy = Join-Path $tool 'youtube_upload.py'
 $ytRecap = ''; $ytShort = ''
 $sidecarPath = $target + '.json'

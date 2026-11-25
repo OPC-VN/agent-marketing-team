@@ -483,7 +483,7 @@ def build_command(engine: str, model: str, prompt: str, *, tools=(), cwd=None, c
 # ── Nhận biết hết hạn mức và các loại lỗi khác ──────────────────────────────────────
 
 MAU_QUOTA = re.compile(
-    r"hit your (?:session|usage) limit|usage limit reached|quota exceeded|"
+    r"hit your (?:session|usage) limit|usage limit reached|quota (?:exceeded|reached)|"
     r"resource[_ ]exhausted|rate limit exceeded|out of (?:credits|quota)", re.I)
 MAU_AUTH = re.compile(
     r"not logged in|please (?:run )?log ?in|unauthenticated|invalid api key|"
@@ -1463,11 +1463,14 @@ def call(prompt: str, *, engine: str, model="best", tools=(), skills=(), skills_
         break
 
     cuoi = tried[-1] if tried else {"kind": "engine", "error": "không lượt nào chạy"}
-    loai_cuoi = cuoi.get("kind") or "engine"
     # Engine bị BỎ QUA vì prompt quá trần không phải là "chưa hết hạn mức": chuỗi mà mọi engine
     # còn lại đều hết hạn mức vẫn là mã 4 (đợi `resets_at`), không phải mã 1.
     het_quota = (any(t.get("kind") == "quota" for t in tried)
                  and all(t.get("kind") in ("quota", "too_long") for t in tried))
+    if not het_quota and cuoi.get("kind") == "quota":
+        # A quota response from the last fallback must not mask a failed engine.
+        cuoi = next(t for t in reversed(tried) if t.get("kind") not in ("quota", "too_long"))
+    loai_cuoi = cuoi.get("kind") or "engine"
     if het_quota:
         ma = QUOTA_EXHAUSTED
     else:

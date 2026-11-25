@@ -643,15 +643,23 @@ if ($script:VoiceStation) { $env:VOICE_STATION = $script:VoiceStation }
 if ($script:VideoStation) { $env:VIDEO_STATION = $script:VideoStation }
 
 function Get-BrandDir {
-  param([Parameter(Mandatory)][string]$Brand)
+  param([Parameter(Mandatory)][string]$Brand, [string]$Config = '')
 
   $tram = if ($script:Station) { $script:Station } else { Get-StationRoot }
   $map  = @{ 'ai' = 'ai-news'; 'data' = 'data-news'; 'repo' = (Join-Path 'ai-news' 'hot-repo') }
 
-  if (-not $map.ContainsKey($Brand)) {
-    throw "Get-BrandDir: brand '$Brand' chua duoc khai trong bang anh xa (ai|data|repo)."
+  $channel = $map[$Brand]
+  if (-not $channel -and $Config) {
+    $snapshot = Get-Content -LiteralPath $Config -Raw -Encoding UTF8 | ConvertFrom-Json
+    $channel = [string]$snapshot.brand_channel
+    if ($channel -notmatch '^[A-Za-z0-9_-]+$') {
+      throw "Get-BrandDir: cau hinh thieu brand_channel hop le cho brand '$Brand'."
+    }
   }
-  $moi = Join-Path $tram $map[$Brand]
+  if (-not $channel) {
+    throw "Get-BrandDir: brand '$Brand' chua duoc khai. Truyen ban chup -Config cho kenh rieng."
+  }
+  $moi = Join-Path $tram $channel
   if (Test-Path $moi) { $script:BrandSrc = 'NEW'; return $moi }
 
   # FAIL-CLOSED thay cho đường lùi.
@@ -1079,4 +1087,49 @@ function Set-SecretEnv {
       Set-Item -Path ("env:" + $t) -Value (Resolve-Home ([string]$e[$t]).Trim())
     }
   }
+}
+
+function Get-TopstoryVisualBrief {
+  Get-Content -LiteralPath (Join-Path $script:EngineDir 'news_image_right_brief.md') -Raw -Encoding UTF8
+}
+
+function Invoke-TopstoryAssetGate {
+  param([Parameter(Mandatory)][string]$Python, [Parameter(Mandatory)][string]$AgentPython,
+        [Parameter(Mandatory)][string]$JsonPath, [Parameter(Mandatory)][string]$HistoryDir,
+        [int]$ExpectedChapters = 4, [string]$ResearchContext = '', [switch]$NoRepair,
+        [scriptblock]$OnLine)
+  if ($OnLine) { & $OnLine '=== Asset gate and storyboard ===' }
+  $gate = Join-Path $script:EngineDir 'news_asset_gate.py'
+  # A weekly edition may need an initial draft before its single repair opportunity.
+  $attempts = if (Test-Path -LiteralPath $JsonPath -PathType Leaf) { 2 } else { 3 }
+  for ($attempt = 1; $attempt -le $attempts; $attempt++) {
+    $assetLines = @(& $Python $gate $JsonPath --history $HistoryDir --expected-chapters $ExpectedChapters 2>&1)
+    $assetCode = $LASTEXITCODE
+    if ($OnLine) { $assetLines | ForEach-Object { & $OnLine ([string]$_) } }
+    if ($assetCode -eq 0) {
+      $ready = $JsonPath -replace '-top\.json$', '-ready.json'
+      if ($ready -ne $JsonPath -and (Test-Path -LiteralPath $ready -PathType Leaf)) {
+        return [pscustomobject]@{ code = 0; path = $ready }
+      }
+      break
+    }
+    if ($attempt -eq $attempts -or $NoRepair) { break }
+    $feedback = $assetLines -join "`n"
+    $brief = Get-TopstoryVisualBrief
+    $prompt = @"
+Prepare or repair the video-only brief at $JsonPath. Keep the topic and existing editorial
+facts. Search again with a different query for scenes missing a relevant standalone still.
+Write only the video JSON and local assets in its folder. Do not publish or change the source.
+$ResearchContext
+$brief
+Asset gate feedback:
+$feedback
+"@
+    $fix = Invoke-AgentCall -Python $AgentPython -Prompt $prompt -Cwd (Split-Path -Parent $JsonPath) `
+      -Tools ('web,read,write,shell:curl,shell:python,shell:' + $Python) `
+      -Expect @($JsonPath + ':800') -OnLine $OnLine
+    if ($null -eq $fix -or $null -eq $fix.code) { break }
+    if ($fix.code -ne 0) { return [pscustomobject]@{ code = $fix.code; path = $null } }
+  }
+  return [pscustomobject]@{ code = 2; path = $null }
 }

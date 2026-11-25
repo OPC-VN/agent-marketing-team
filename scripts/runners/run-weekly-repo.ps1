@@ -37,6 +37,7 @@ $engine   = $PSScriptRoot
 Set-SecretEnv
 $brandDir = Get-BrandDir 'repo'
 $cfg      = Get-Cfg -Config $Config -BrandDir $brandDir
+$imageRight = $cfg.video_layout -eq 'image-right'
 $self     = Join-Path $engine 'run-weekly-repo.ps1'
 # Wrapper báo cáo của Task Scheduler KHÔNG nằm trong repo (hạ tầng của máy) — chỉ dùng ở
 # -Register, và phải khai bằng NOTIFY_RUN. macOS dùng `scripts/runners/notify_run.py`.
@@ -156,6 +157,7 @@ else {
     $seenFull = $seen.Trim(); if ($exclude) { $seenFull += "`n" + $exclude.TrimEnd() }
     $prompt = $tmpl.Replace('{{DISPLAY_DATE}}', $dispDate).Replace('{{JSON_PATH}}', $jsonPath).Replace('{{DIR}}', $outDir).Replace('{{DATE}}', $Date).Replace('{{DATE_MINUS_60}}', $dMinus60).Replace('{{L30_SCRIPT}}', $l30).Replace('{{YTDLP}}', $ovpy).Replace('{{SEEN_LIST}}', $seenFull).Replace('{{VIEWPOINT}}', $viewpoint).Replace('{{BGM_LIST}}', $bgmListText)
 
+    if ($imageRight) { $prompt += "`n`n" + (Get-TopstoryVisualBrief) }
     Log ("Nghien cuu qua agent_call (engine theo order) ... [lan $att/3]")
     $ac = Invoke-AgentCall -Python $syspy -Prompt $prompt -Tools $tools -Cwd $outDir `
       -Expect @($jsonPath + ':800') -OnLine { param($s) Log ('agent: ' + $s) }
@@ -193,6 +195,15 @@ $repoUrl  = [string]$brief.repo.url
 $headline = [string]$brief.top_story.headline
 Log ("JSON OK: $repoName | $headline")
 
+$renderInput = $jsonPath
+if ($imageRight) {
+  $assetReady = Invoke-TopstoryAssetGate -Python $ovpy -AgentPython $syspy -JsonPath $jsonPath `
+    -HistoryDir $outRoot -ExpectedChapters 0 -ResearchContext "Campaign prompt: $prompt0" -NoRepair:$SkipResearch `
+    -OnLine { param($line) Log $line }
+  if ($assetReady.code -ne 0) { Log '=== failed before render ==='; exit $assetReady.code }
+  $renderInput = $assetReady.path
+}
+
 # ---- BƯỚC 2: render long + short (video-studio render --project topstory) ----
 # Thương hiệu đi TRONG spec (campaign.md: identity); màu nhấn vẫn qua TOPSTORY_ACCENTS
 # (template topstory của video-studio 0.1.0 còn đọc biến đó).
@@ -208,7 +219,7 @@ else { $bgmPath = ''; Log 'BGM: tat' }
 
 Log 'Rendering deep-dive + short ...'
 $cfgFile = if ($Config) { $Config } else { Join-Path $brandDir 'brand.json' }
-$rv = Invoke-TopstoryRender -Python $ovpy -JsonPath $jsonPath -ConfigFile $cfgFile -Date $Date `
+$rv = Invoke-TopstoryRender -Python $ovpy -JsonPath $renderInput -ConfigFile $cfgFile -Date $Date `
         -OutDir $outDir -VoiceProfile $voice.name -BgmPath $bgmPath -BgmDir $bgmDir -BgmVol $bgmVol `
         -OnLine { param($l) Log ('video: ' + $l) }
 Log ('video-studio: ma ' + $rv.code + ' (' + (Get-VideoStudioCodeText $rv.code) + ')  spec ' + $rv.spec)
