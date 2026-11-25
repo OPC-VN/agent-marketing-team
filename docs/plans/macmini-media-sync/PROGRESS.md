@@ -55,3 +55,5 @@ Nhật ký chung của hai phiên Codex. Thêm mục ở cuối, không sửa m�
 
   - **Lệch so với kế hoạch.** Tạm dừng `marketing.bundle` vì lịch sử nguồn có sổ đăng, đầu ra, log và đường dẫn tệp có nguy cơ chứa thông tin xác thực. Cần quyết định về bản chụp cấu hình đã lọc.
   - **Cần chủ máy.** Chọn cách đóng gói marketing, giữ hay bỏ các sửa dở trong README, và có kèm hai ZIP giọng tùy chọn hay không. Các sửa dở trong README vẫn ở checkout gốc.
+
+- 2026-11-25 · Codex-W · W-P0 — GitHub Actions trên nhánh của PR video riêng báo lỗi ở ba job pytest Windows. Test `test_effect_distribution_build.py::test_isolated_wheel_and_sdist_round_trip` cũng lỗi trên `main` ở Python 3.12. Cổng chống rò và test short chạy riêng trên Windows đạt. [CI nhánh video](https://github.com/OPC-VN/agent-video-studio/actions/runs/45541897461) · [CI main](https://github.com/OPC-VN/agent-video-studio/actions/runs/45250908785).
