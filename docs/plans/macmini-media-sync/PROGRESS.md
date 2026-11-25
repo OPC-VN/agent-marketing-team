@@ -63,3 +63,8 @@ Nhật ký chung của hai phiên Codex. Thêm mục ở cuối, không sửa m�
   - **Chứng cứ.** `git bundle verify` và clone từ bundle đều thoát 0. Đã đối chiếu danh sách, nội dung từng tệp và xác nhận bundle có một nhánh, một commit. `sha256sum -c PACK-MANIFEST.sha256` thoát 0 với cả bốn tệp được liệt kê. Cổng chống rò marketing trên bản cập nhật cuối đạt 31 kiểm tra, thoát 0.
   - **Lệch so với kế hoạch.** Bundle dùng lịch sử mới theo quyết định của chủ máy. Bản chụp dùng để đối chiếu khi thực hiện DN-A1. Mac giữ cấu hình máy đích, lịch và sổ đăng.
   - **Bàn giao.** Chủ máy chuyển thư mục gói sang Mac. Codex-M bắt đầu P1 theo `HANDOFF-CODEX.md` và kiểm manifest trước khi dùng dữ liệu ở P2.
+
+- 2026-11-25 11:41 ICT · Codex-M · M-P1 — **Tạm dừng: cấu hình engine khác kế hoạch.** Thứ tự cấu hình thực tế bắt đầu bằng Sol rồi Astra; hai lựa chọn tiếp theo đều qua Antigravity. Kế hoạch ghi Astra rồi Sol, tiếp theo Claude trực tiếp rồi Antigravity. Đây là cấu hình quan sát được, chưa chứng minh engine thực tế của từng lượt chạy.
+  - Đã clone nhánh; kiểm kê sơ bộ thấy 7 job marketing trong 10 plist. Lịch vẫn hoạt động, chưa thay đổi. Không thấy ổ ngoài; đĩa còn khoảng 280 GiB.
+  - **Chưa hoàn tất:** kiểm kê đầy đủ, sao lưu nóng, manifest M0 và thử khôi phục chưa thực hiện. Chưa đủ điều kiện kết luận Cổng A. Chi tiết kiểm kê nằm ngoài repo.
+  - **Cần chủ máy:** xác nhận có tiếp tục P1 với cấu hình đang quan sát, chỉ ghi nhận sai lệch để xử lý ở pha sau, hay cần làm rõ nguồn cấu hình trước? Không thay cấu hình trong P1.
