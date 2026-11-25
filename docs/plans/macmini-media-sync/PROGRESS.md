@@ -85,3 +85,6 @@ Nhật ký chung của hai phiên Codex. Thêm mục ở cuối, không sửa m�
 
 - 2026-11-25 · Codex-M · M-P1 — Đã rà 30 ngày log theo từng tệp chính, ghi phân loại và giới hạn vào bằng chứng riêng. Tệp có marker hoàn tất / bỏ qua / giữ duyệt / lỗi không tương đương số lượt chạy hoặc xác nhận đăng từng đích; chưa xác định được tổng render lại và video không đăng. Lượt Kira đọc đơn và ghi một biên nhận giả khớp hash đã PASS thủ công; kích hoạt tự động chưa thử.
   - **Cổng A còn mở:** bản sao nóng và thử khôi phục mẫu đạt trong phạm vi đã lưu; M0 chưa bao phủ toàn vùng bảo vệ và bản sao ở cùng ổ. Cần chủ máy quyết phạm vi baseline/ngoại lệ và DN-A1…A5, DN-K1…K4; hồ sơ chi tiết ở vùng bằng chứng riêng. Không thể khai P1/SC1 hoàn tất khi phạm vi sao lưu chưa được chốt.
+
+- 2026-11-25 · Codex-M + Sol · M-P2 chuẩn bị — Đã nhận bản đồng ý chuẩn bị P2 với ngoại lệ sao lưu, không coi SC1 đã đạt. Gói chuyển máy được xác minh 4/4 theo manifest; đã tạo môi trường chung và trạm thử, đối chiếu 18 profile, 26 asset. Bảy runner qua ResolveOnly; năm lịch thử khớp. Mẫu video không lời render đạt; chưa kiểm giọng hoặc Full/Short đầu–cuối.
+  - **HOLD:** voice thiếu thư viện engine đang chờ chủ máy đồng ý tải và chọn giọng; cây marketing còn bảy lỗi lịch sử; hai lịch chưa qua dry-run. SC1 và SC2 chưa đạt; chưa thực hiện v2, P3–P6 hay thay lịch. Chi tiết riêng ở hồ sơ P2.
