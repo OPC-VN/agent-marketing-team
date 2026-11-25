@@ -30,8 +30,7 @@ Nhật ký chung của hai phiên Codex. Thêm mục ở cuối, không sửa m�
 
 ## Cần chủ máy
 
-- W-P0 · Chọn có dùng bản chụp cấu hình marketing đã lọc.
-- W-P0 · Chọn giữ hay bỏ sửa dở README và có kèm ZIP giọng tùy chọn.
+- W-P0 · Chủ máy đã chốt ba lựa chọn. Xem mục chốt W-P0 trong nhật ký.
 
 ## Nhật ký
 
@@ -57,3 +56,10 @@ Nhật ký chung của hai phiên Codex. Thêm mục ở cuối, không sửa m�
   - **Cần chủ máy.** Chọn cách đóng gói marketing, giữ hay bỏ các sửa dở trong README, và có kèm hai ZIP giọng tùy chọn hay không. Các sửa dở trong README vẫn ở checkout gốc.
 
 - 2026-11-25 · Codex-W · W-P0 — GitHub Actions trên nhánh của PR video riêng báo lỗi ở ba job pytest Windows. Test `test_effect_distribution_build.py::test_isolated_wheel_and_sdist_round_trip` cũng lỗi trên `main` ở Python 3.12. Cổng chống rò và test short chạy riêng trên Windows đạt. [CI nhánh video](https://github.com/OPC-VN/agent-video-studio/actions/runs/45541897461) · [CI main](https://github.com/OPC-VN/agent-video-studio/actions/runs/45250908785).
+
+- 2026-11-25 10:54 ICT · Codex-W · W-P0 — Hoàn tất phần Windows. Chủ máy chọn bản chụp marketing đã lọc, giữ các sửa dở README ở checkout gốc và bỏ hai ZIP giọng tùy chọn.
+
+  - **Gói hoàn chỉnh.** `marketing.bundle` gồm 28 tệp cấu hình kênh, chiến dịch, runner, tài liệu kênh và cấu hình engine trong một commit trên nhánh `macmini-snapshot`. Dung lượng 0,127 MB. SHA-256 `b7e8add1c97478563ddd057e64b4f150e7c567787453ba5f9ad41ec109bb43dd`.
+  - **Chứng cứ.** `git bundle verify` và clone từ bundle đều thoát 0. Đã đối chiếu danh sách, nội dung từng tệp và xác nhận bundle có một nhánh, một commit. `sha256sum -c PACK-MANIFEST.sha256` thoát 0 với cả bốn tệp được liệt kê. Cổng chống rò marketing trên bản cập nhật cuối đạt 31 kiểm tra, thoát 0.
+  - **Lệch so với kế hoạch.** Bundle dùng lịch sử mới theo quyết định của chủ máy. Bản chụp dùng để đối chiếu khi thực hiện DN-A1. Mac giữ cấu hình máy đích, lịch và sổ đăng.
+  - **Bàn giao.** Chủ máy chuyển thư mục gói sang Mac. Codex-M bắt đầu P1 theo `HANDOFF-CODEX.md` và kiểm manifest trước khi dùng dữ liệu ở P2.
