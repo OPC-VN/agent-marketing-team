@@ -80,3 +80,5 @@ Nhật ký chung của hai phiên Codex. Thêm mục ở cuối, không sửa m�
 
 - 2026-11-25 · Codex-M · M-P1 — Chủ máy mở Kira/Dot; phiên Codex vẫn không thấy bề mặt Dot, còn cửa sổ ứng dụng không cho công cụ truy cập. Vì vậy chưa xác minh được kết nối hoặc lịch Kira; không suy từ các tab khác.
   - Đã sao lưu bổ sung bản chọn lọc gồm 3 tệp luật và metadata lịch/cấu hình không chứa giá trị môi trường; 3/3 bản sao khớp nguồn, thử khôi phục 5/5 tệp đạt. Các tệp cấu hình có thể chứa bí mật, dữ liệu xác thực và automation chưa xác định chỉ thống kê metadata. Đây chưa phải bản sao toàn vùng hoặc M0 đầy đủ.
+
+- 2026-11-25 · Codex-M · Chuẩn bị M-P2 — Theo yêu cầu chủ máy, đã clone riêng hai repo video và voice trên nhánh kế hoạch; tương ứng `006b602` và `691a243`, cây làm việc sạch. Chưa cài môi trường, nhập gói hay dựng trạm; P1 và các quyết định Cổng A vẫn còn mở. Lịch cũ không thay đổi.
