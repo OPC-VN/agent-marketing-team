@@ -82,3 +82,6 @@ Nhật ký chung của hai phiên Codex. Thêm mục ở cuối, không sửa m�
   - Đã sao lưu bổ sung bản chọn lọc gồm 3 tệp luật và metadata lịch/cấu hình không chứa giá trị môi trường; 3/3 bản sao khớp nguồn, thử khôi phục 5/5 tệp đạt. Các tệp cấu hình có thể chứa bí mật, dữ liệu xác thực và automation chưa xác định chỉ thống kê metadata. Đây chưa phải bản sao toàn vùng hoặc M0 đầy đủ.
 
 - 2026-11-25 · Codex-M · Chuẩn bị M-P2 — Theo yêu cầu chủ máy, đã clone riêng hai repo video và voice trên nhánh kế hoạch; tương ứng `006b602` và `691a243`, cây làm việc sạch. Chưa cài môi trường, nhập gói hay dựng trạm; P1 và các quyết định Cổng A vẫn còn mở. Lịch cũ không thay đổi.
+
+- 2026-11-25 · Codex-M · M-P1 — Đã rà 30 ngày log theo từng tệp chính, ghi phân loại và giới hạn vào bằng chứng riêng. Tệp có marker hoàn tất / bỏ qua / giữ duyệt / lỗi không tương đương số lượt chạy hoặc xác nhận đăng từng đích; chưa xác định được tổng render lại và video không đăng. Lượt Kira đọc đơn và ghi một biên nhận giả khớp hash đã PASS thủ công; kích hoạt tự động chưa thử.
+  - **Cổng A còn mở:** bản sao nóng và thử khôi phục mẫu đạt trong phạm vi đã lưu; M0 chưa bao phủ toàn vùng bảo vệ và bản sao ở cùng ổ. Cần chủ máy quyết phạm vi baseline/ngoại lệ và DN-A1…A5, DN-K1…K4; hồ sơ chi tiết ở vùng bằng chứng riêng. Không thể khai P1/SC1 hoàn tất khi phạm vi sao lưu chưa được chốt.
