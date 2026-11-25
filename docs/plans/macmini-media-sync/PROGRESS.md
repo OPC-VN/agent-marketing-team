@@ -92,3 +92,5 @@ Nhật ký chung của hai phiên Codex. Thêm mục ở cuối, không sửa m�
 - Codex-M · M-P2 · Kiểm bổ sung — Adapter video khớp nguồn. Lịch truyện qua xem trước với đường dẫn giả, mốc 00:00 khớp lịch hiện hành. Kiểm này chỉ chứng minh cấu trúc mẫu, chưa chứng minh con trỏ thật hoặc khả năng chạy. Một lịch còn thiếu mẫu, voice và Cổng A vẫn còn mở.
 
 - Codex-M · M-P2 · Đối chiếu trạm — Mẫu lịch OPC News thử riêng dựng được và khớp giờ hiện hành. Khôi phục 33 tệp bài từ bản sao, sửa hai con trỏ lịch sử không có sản phẩm và giữ một đề xuất chưa đăng ký trong staging. Kiểm cây giảm từ bảy lỗi xuống một lỗi biên nhận cũ. Bộ thư viện voice vẫn cần tải, cache offline không đủ. Chi tiết ở bằng chứng P2 riêng.
+
+- Codex-M · M-P2 · Giọng — Chủ máy duyệt cài mới thư viện trong môi trường mới và dùng lại cache. Torch 2.15.0, OmniVoice 0.2.1 và Transformers 5.17.0 đã cài. Kiểm phụ thuộc và doctor đạt. Smoke test offline trên MPS tạo WAV hợp lệ 3,37 giây với giọng thử; chưa kiểm profile sản xuất hoặc thử video đầu–cuối. Cổng A và v2 vẫn mở.
