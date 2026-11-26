@@ -1,0 +1,99 @@
+---
+title: PROGRESS — macmini-media-sync (shared log between Codex-W and Codex-M)
+date: 2026-11-25
+status: open
+rules: append-only; sanitized (public repo — no real voice names, account names, machine paths, raw logs); each entry = date-time · session (W/M) · phase
+---
+
+# PROGRESS — macmini-media-sync
+
+Nhật ký chung của hai phiên Codex. Thêm mục ở cuối, không sửa mục cũ. Định dạng: `HANDOFF-CODEX.md` mục 5.
+
+## Đang giữ repo
+
+| Repo | Phiên đang sửa | Từ lúc |
+|---|---|---|
+| agent-marketing-team | — | — |
+| agent-video-studio | — | — |
+| agent-voice-studio | — | — |
+
+## Quyết định của chủ máy
+
+| Mã | Giá trị | Ngày |
+|---|---|---|
+| Lịch Mac | không dừng; sao lưu nóng | 25/11 |
+| Phối hợp | PROGRESS.md + chủ máy dán prompt | 25/11 |
+| Quyền đẩy | Codex đẩy nhánh `macmini-media-sync`, mở PR; chủ máy gộp | 25/11 |
+| Thứ tự engine | codex Astra → codex Sol → claude Opus → agy (Windows đã đổi theo Mac) | 25/11 |
+| DN-PRE3 nơi sao lưu | mặc định: ổ ngoài, không có thì `~/Studio-next/_backup/` | 25/11 |
+| DN-A1…A5, DN-K1…K4 | (điền ở Cổng A) | |
+
+## Cần chủ máy
+
+- W-P0 · Chủ máy đã chốt ba lựa chọn. Xem mục chốt W-P0 trong nhật ký.
+
+## Nhật ký
+
+- 2026-11-25 · Claude (Windows) · lập kế hoạch — Kế hoạch rev 4 viết vào 3 repo. Chưa có phiên Codex nào chạy.
+
+- 2026-11-25 10:45 ICT · Codex-W · W-P0 — Đã đẩy kế hoạch từ `origin/main` lên nhánh `macmini-media-sync` ở ba repo. Gói chuyển máy đang chờ quyết định về phần marketing.
+
+  | Repo | Commit kế hoạch | PR nháp | Cổng chống rò |
+  |---|---|---|---|
+  | Marketing | `2aa882f` | [#19](https://github.com/OPC-VN/agent-marketing-team/pull/19) | 31 đạt |
+  | Video | `006b602` | [#18](https://github.com/OPC-VN/agent-video-studio/pull/18) | 17 đạt |
+  | Voice | `691a243` | [#7](https://github.com/OPC-VN/agent-voice-studio/pull/7) | 10 đạt |
+
+  - **Chứng cứ Git.** `python -m pytest -q --tb=no tests/test_no_identity_leak.py` ở ba repo, thêm `tests/test_no_leak.py` ở marketing, đều thoát 0. GitHub xác nhận ba PR nháp đều mở, đích `main`. Commit gốc `ac72677` có [PR riêng #17](https://github.com/OPC-VN/agent-video-studio/pull/17). Cổng chống rò và bốn tệp test của skill short đạt 52 kiểm tra, thoát 0. Đề xuất chủ máy cân nhắc tag `v0.10.1` ở mốc phát hành `75fac7a`. Đây là mốc đã gộp bản phát hành.
+  - **Chứng cứ gói.** Voice Studio export thoát 0. Hai ZIP qua kiểm danh sách tệp và CRC. `PACK-README.md` cùng hai ZIP khớp `PACK-MANIFEST.sha256`, xác minh ba tệp. Dung lượng dùng MB thập phân.
+
+  | Tệp | MB | SHA-256 |
+  |---|---:|---|
+  | `voice.zip` | 157,86 | `fcacfcd57777121a6ae1fc7f6822f366c99866dca1687c8afa8c0b13bcf2da56` |
+  | `video-assets.zip` | 40,95 | `b407953b3dfff45762c624bb96673e24d71a97871cab2eed62e634e055e2a56d` |
+
+  - **Lệch so với kế hoạch.** Tạm dừng `marketing.bundle` vì lịch sử nguồn có sổ đăng, đầu ra, log và đường dẫn tệp có nguy cơ chứa thông tin xác thực. Cần quyết định về bản chụp cấu hình đã lọc.
+  - **Cần chủ máy.** Chọn cách đóng gói marketing, giữ hay bỏ các sửa dở trong README, và có kèm hai ZIP giọng tùy chọn hay không. Các sửa dở trong README vẫn ở checkout gốc.
+
+- 2026-11-25 · Codex-W · W-P0 — GitHub Actions trên nhánh của PR video riêng báo lỗi ở ba job pytest Windows. Test `test_effect_distribution_build.py::test_isolated_wheel_and_sdist_round_trip` cũng lỗi trên `main` ở Python 3.12. Cổng chống rò và test short chạy riêng trên Windows đạt. [CI nhánh video](https://github.com/OPC-VN/agent-video-studio/actions/runs/45541897461) · [CI main](https://github.com/OPC-VN/agent-video-studio/actions/runs/45250908785).
+
+- 2026-11-25 10:54 ICT · Codex-W · W-P0 — Hoàn tất phần Windows. Chủ máy chọn bản chụp marketing đã lọc, giữ các sửa dở README ở checkout gốc và bỏ hai ZIP giọng tùy chọn.
+
+  - **Gói hoàn chỉnh.** `marketing.bundle` gồm 28 tệp cấu hình kênh, chiến dịch, runner, tài liệu kênh và cấu hình engine trong một commit trên nhánh `macmini-snapshot`. Dung lượng 0,127 MB. SHA-256 `b7e8add1c97478563ddd057e64b4f150e7c567787453ba5f9ad41ec109bb43dd`.
+  - **Chứng cứ.** `git bundle verify` và clone từ bundle đều thoát 0. Đã đối chiếu danh sách, nội dung từng tệp và xác nhận bundle có một nhánh, một commit. `sha256sum -c PACK-MANIFEST.sha256` thoát 0 với cả bốn tệp được liệt kê. Cổng chống rò marketing trên bản cập nhật cuối đạt 31 kiểm tra, thoát 0.
+  - **Lệch so với kế hoạch.** Bundle dùng lịch sử mới theo quyết định của chủ máy. Bản chụp dùng để đối chiếu khi thực hiện DN-A1. Mac giữ cấu hình máy đích, lịch và sổ đăng.
+  - **Bàn giao.** Chủ máy chuyển thư mục gói sang Mac. Codex-M bắt đầu P1 theo `HANDOFF-CODEX.md` và kiểm manifest trước khi dùng dữ liệu ở P2.
+
+- 2026-11-25 11:41 ICT · Codex-M · M-P1 — **Tạm dừng: cấu hình engine khác kế hoạch.** Thứ tự cấu hình thực tế bắt đầu bằng Sol rồi Astra; hai lựa chọn tiếp theo đều qua Antigravity. Kế hoạch ghi Astra rồi Sol, tiếp theo Claude trực tiếp rồi Antigravity. Đây là cấu hình quan sát được, chưa chứng minh engine thực tế của từng lượt chạy.
+  - Đã clone nhánh; kiểm kê sơ bộ thấy 7 job marketing trong 10 plist. Lịch vẫn hoạt động, chưa thay đổi. Không thấy ổ ngoài; đĩa còn khoảng 280 GiB.
+  - **Chưa hoàn tất:** kiểm kê đầy đủ, sao lưu nóng, manifest M0 và thử khôi phục chưa thực hiện. Chưa đủ điều kiện kết luận Cổng A. Chi tiết kiểm kê nằm ngoài repo.
+  - **Cần chủ máy:** xác nhận có tiếp tục P1 với cấu hình đang quan sát, chỉ ghi nhận sai lệch để xử lý ở pha sau, hay cần làm rõ nguồn cấu hình trước? Không thay cấu hình trong P1.
+
+- 2026-11-25 11:56 ICT · Codex-M · M-P1 — Chủ máy xác nhận giữ nguyên cấu hình engine quan sát được, ghi sai lệch để xử lý pha sau. Tiếp tục kiểm kê và sao lưu; không sửa lịch hoặc cây cũ.
+  - **Kiểm kê:** 11 repo trong vùng khảo sát, 3 trạm, 14 chiến dịch trực tiếp, 10 plist gồm 7 job marketing. Không thấy ổ ngoài; ổ trong còn khoảng 277 GiB. Dung lượng ba trạm khoảng 4,0 GiB. Khe không có lịch marketing mới dự kiến 12:00–14:00, cần kiểm lại job thực tế và lịch khác trước khi dùng.
+  - **Cổng rà cũ:** hai tệp chính kiểm tra chứng cứ nguồn, quyền dùng, ảnh riêng theo chương, hash và hai bố cục; bước duyệt trước đăng còn cần người xem video. Nếu thiếu bằng chứng hoặc duyệt thì giữ lại. Đã tìm thấy 7 tệp log có dấu giữ trong mẫu 127 log 30 ngày; đó là số tệp, không phải số lượt hay số video bị chặn. Chưa xác định đủ số lượt chạy lại và kết quả từng đích.
+  - **Sao lưu một phần:** bản sao repo khoảng 3,2 GiB và 10 plist trên ổ trong; 10/10 plist khớp, 13.323 tệp trong tar khớp nguồn, khôi phục mẫu 20/20. Bộ đếm bảy job không đổi trong lúc tar. Bản sao không bao phủ toàn vùng bảo vệ: đã loại cấu hình Git có thể chứa xác thực và chưa sao lưu cấu hình harness, automation khác và các vị trí ngoài cây repo; M0 chưa đủ chứng minh SC1 toàn vùng. Cần quyết định cách sao lưu an toàn phần còn thiếu. Không có ổ ngoài nên bản sao không chống hỏng ổ.
+  - **Cần chủ máy tại Cổng A:** DN-A1 nguồn từng loại dữ liệu; DN-A2 kênh chạy máy nào; DN-A3 luật rà nào giữ/bỏ; DN-A4 cách báo Kira; DN-A5 quyền riêng tư lượt đầu. DN-K1 cách báo; DN-K2 kèm file hay link; DN-K3 giới hạn nhịp; DN-K4 group thử. Chưa xác minh cách gọi Kira và nguồn Kira đọc được; xin chủ máy cung cấp. Chưa đủ bằng chứng hoàn tất P1/Cổng A.
+
+- 2026-11-25 · Codex-M · M-P1 — Chủ máy cho biết Kira là Dot của ChatGPT kết nối Mac. Kiểm tra phiên hiện tại thấy ChatGPT và Chrome nhưng chưa thấy bề mặt Dot để xác minh độc lập cách gọi, lịch hoặc quyền đọc nguồn; không suy các tab trình duyệt đang mở thuộc Kira. Không thấy định nghĩa automation ở vị trí cục bộ đã kiểm; chưa đủ cơ sở kết luận không có lịch khác hoặc lịch cloud.
+  - **Đề xuất sao lưu bổ sung:** lập danh sách cho phép từng tệp, chỉ chép script/tài liệu và bản trích cấu hình sau khi loại giá trị nhạy cảm; thống kê phần còn lại bằng metadata, dùng export chính thức cho automation nếu có, không chép cơ sở dữ liệu đăng nhập hay cookie. So hash và thử khôi phục mẫu vào vùng tạm. Bản đã làm sạch không khôi phục xác thực, và chưa thay thế được M0 đầy đủ. Chưa thực hiện sao lưu bổ sung; bản sao trước vẫn chỉ bao phủ một phần.
+
+- 2026-11-25 · Codex-M · M-P1 — Chủ máy mở Kira/Dot; phiên Codex vẫn không thấy bề mặt Dot, còn cửa sổ ứng dụng không cho công cụ truy cập. Vì vậy chưa xác minh được kết nối hoặc lịch Kira; không suy từ các tab khác.
+  - Đã sao lưu bổ sung bản chọn lọc gồm 3 tệp luật và metadata lịch/cấu hình không chứa giá trị môi trường; 3/3 bản sao khớp nguồn, thử khôi phục 5/5 tệp đạt. Các tệp cấu hình có thể chứa bí mật, dữ liệu xác thực và automation chưa xác định chỉ thống kê metadata. Đây chưa phải bản sao toàn vùng hoặc M0 đầy đủ.
+
+- 2026-11-25 · Codex-M · Chuẩn bị M-P2 — Theo yêu cầu chủ máy, đã clone riêng hai repo video và voice trên nhánh kế hoạch; tương ứng `006b602` và `691a243`, cây làm việc sạch. Chưa cài môi trường, nhập gói hay dựng trạm; P1 và các quyết định Cổng A vẫn còn mở. Lịch cũ không thay đổi.
+
+- 2026-11-25 · Codex-M · M-P1 — Đã rà 30 ngày log theo từng tệp chính, ghi phân loại và giới hạn vào bằng chứng riêng. Tệp có marker hoàn tất / bỏ qua / giữ duyệt / lỗi không tương đương số lượt chạy hoặc xác nhận đăng từng đích; chưa xác định được tổng render lại và video không đăng. Lượt Kira đọc đơn và ghi một biên nhận giả khớp hash đã PASS thủ công; kích hoạt tự động chưa thử.
+  - **Cổng A còn mở:** bản sao nóng và thử khôi phục mẫu đạt trong phạm vi đã lưu; M0 chưa bao phủ toàn vùng bảo vệ và bản sao ở cùng ổ. Cần chủ máy quyết phạm vi baseline/ngoại lệ và DN-A1…A5, DN-K1…K4; hồ sơ chi tiết ở vùng bằng chứng riêng. Không thể khai P1/SC1 hoàn tất khi phạm vi sao lưu chưa được chốt.
+
+- 2026-11-25 · Codex-M + Sol · M-P2 chuẩn bị — Đã nhận bản đồng ý chuẩn bị P2 với ngoại lệ sao lưu, không coi SC1 đã đạt. Gói chuyển máy được xác minh 4/4 theo manifest; đã tạo môi trường chung và trạm thử, đối chiếu 18 profile, 26 asset. Bảy runner qua ResolveOnly; năm lịch thử khớp. Mẫu video không lời render đạt; chưa kiểm giọng hoặc Full/Short đầu–cuối.
+  - **HOLD:** voice thiếu thư viện engine đang chờ chủ máy đồng ý tải và chọn giọng; cây marketing còn bảy lỗi lịch sử; hai lịch chưa qua dry-run. SC1 và SC2 chưa đạt; chưa thực hiện v2, P3–P6 hay thay lịch. Chi tiết riêng ở hồ sơ P2.
+
+- Codex-M · M-P2 · Kiểm bổ sung — Adapter video khớp nguồn. Lịch truyện qua xem trước với đường dẫn giả, mốc 00:00 khớp lịch hiện hành. Kiểm này chỉ chứng minh cấu trúc mẫu, chưa chứng minh con trỏ thật hoặc khả năng chạy. Một lịch còn thiếu mẫu, voice và Cổng A vẫn còn mở.
+
+- Codex-M · M-P2 · Đối chiếu trạm — Mẫu lịch OPC News thử riêng dựng được và khớp giờ hiện hành. Khôi phục 33 tệp bài từ bản sao, sửa hai con trỏ lịch sử không có sản phẩm và giữ một đề xuất chưa đăng ký trong staging. Kiểm cây giảm từ bảy lỗi xuống một lỗi biên nhận cũ. Bộ thư viện voice vẫn cần tải, cache offline không đủ. Chi tiết ở bằng chứng P2 riêng.
+
+- Codex-M · M-P2 · Giọng — Chủ máy duyệt cài mới thư viện trong môi trường mới và dùng lại cache. Torch 2.15.0, OmniVoice 0.2.1 và Transformers 5.17.0 đã cài. Kiểm phụ thuộc và doctor đạt. Smoke test offline trên MPS tạo WAV hợp lệ 3,37 giây với giọng thử; chưa kiểm profile sản xuất hoặc thử video đầu–cuối. Cổng A và v2 vẫn mở.
+
+- Codex-M · UAT cục bộ · Daily AI — Từ một edition lịch sử, bản thử riêng đã kiểm 4 hình và storyboard đủ Full/Short trước khi gọi template repo video mới; bỏ một hình trong ca âm tính thì dừng. Render báo mã 0. Full 5:21 và Short 0:49 có hình, tiếng, thông số đúng. Không gọi cổng duyệt video cuối, publisher hoặc Kira. Bản sao runner và lịch cũ giữ nguyên.
+  - Rà log ba luồng ngày: sáu lượt bị giữ duyệt sau render kèm báo cáo Telegram theo lượt. Chưa có bằng chứng gửi trùng video hay Kira gây lỗi. Kết quả UAT chỉ chứng minh Daily AI từ đầu vào có sẵn; chưa kiểm tự tìm asset cho edition mới, các campaign khác hoặc đăng thật. Bằng chứng và video lưu riêng.
